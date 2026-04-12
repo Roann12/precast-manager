@@ -1,0 +1,11 @@
+.env
+*.log
+__pycache__/
+*.pyc
+.venv/
+backend/.venv/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+db_data/

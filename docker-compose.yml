@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/backend.Dockerfile
+    env_file:
+      - .env
+    environment:
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Include localhost + LAN host origin for cross-device testing.
+      BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS}'
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ENVIRONMENT: ${ENVIRONMENT}
+      ENABLE_DEV_ENDPOINTS: ${ENABLE_DEV_ENDPOINTS}
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend.Dockerfile
+      args:
+        # Route API through nginx proxy to avoid CORS/IP issues.
+        VITE_API_BASE_URL: "/api"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  db_data:
+

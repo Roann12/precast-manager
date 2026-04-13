@@ -5,6 +5,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth/AuthContext";
+import precastLogo from "../../assets/precast-logo.png";
 
 interface Props {
   children: ReactNode;
@@ -25,10 +26,18 @@ export default function MainLayout({ children }: Props) {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
       <AppBar position="fixed" elevation={0} color="transparent" sx={{ zIndex: 1201 }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: -0.2 }}>
-            Precast Manager
-          </Typography>
+        <Toolbar sx={{ pl: { xs: 7, sm: sidebarCollapsed ? 8 : 2 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+            <Box
+              component="img"
+              src={precastLogo}
+              alt="Precast Manager logo"
+              sx={{ width: 36, height: 36, objectFit: "contain" }}
+            />
+            <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: -0.2 }}>
+              Precast Manager
+            </Typography>
+          </Box>
           <Box sx={{ flexGrow: 1 }} />
           {!loading && user ? (
             <Button
@@ -53,7 +62,8 @@ export default function MainLayout({ children }: Props) {
         sx={{
           position: "fixed",
           top: 10,
-          left: sidebarCollapsed ? 10 : drawerWidth - 16,
+          // Keep the toggle clear of the app title/logo when sidebar is expanded.
+          left: { xs: 10, sm: sidebarCollapsed ? 10 : drawerWidth + 8 },
           zIndex: 3000,
           backgroundColor: "background.paper",
           border: "1px solid",

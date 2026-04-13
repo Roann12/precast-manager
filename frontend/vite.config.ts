@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["pwa-icon.svg"],
+      includeAssets: ["pwa-icon.png"],
       manifest: {
         name: "Precast Manager",
         short_name: "Precast",
@@ -18,15 +18,18 @@ export default defineConfig({
         start_url: "/",
         icons: [
           {
-            src: "/pwa-icon.svg",
+            src: "/pwa-icon.png",
             sizes: "512x512",
-            type: "image/svg+xml",
+            type: "image/png",
             purpose: "any maskable",
           },
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         navigateFallback: "/index.html",
       },
       devOptions: { enabled: false },

@@ -4,6 +4,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { Alert, Box, Button, IconButton, InputAdornment, Paper, TextField, Typography } from "@mui/material";
 import { useAuth } from "../auth/AuthContext";
+import precastLogo from "../assets/precast-logo.png";
 
 type LoginLocationState = { sessionMessage?: string };
 
@@ -12,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState("email here");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("password here");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,9 @@ export default function Login() {
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
       <Paper sx={{ p: 3, width: 420 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+          <Box component="img" src={precastLogo} alt="Precast Manager logo" sx={{ width: 96, height: 96, objectFit: "contain" }} />
+        </Box>
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
           Login
         </Typography>

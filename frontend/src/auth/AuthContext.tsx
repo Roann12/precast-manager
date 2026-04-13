@@ -45,13 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("access_token");
       qc.removeQueries({ queryKey: AUTH_ME_QUERY_KEY });
       setTokenPresent(false);
+      const trimmed = message?.trim();
+      // /auth/me returns this for expired or invalid JWTs; show a user-facing message instead.
+      const sessionMessage =
+        !trimmed || trimmed === "Could not validate credentials"
+          ? "Your session has expired or you were signed out. Please sign in again."
+          : trimmed;
       navigate("/login", {
         replace: true,
-        state: {
-          sessionMessage:
-            message?.trim() ||
-            "Your session has expired or you were signed out. Please sign in again.",
-        },
+        state: { sessionMessage },
       });
     });
     return () => setUnauthorizedHandler(null);

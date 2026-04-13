@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
 
@@ -45,7 +46,7 @@ def seed_demo_data(db: Session):
         ("Viewer", "viewer@local", "viewer123", "viewer"),
     ]
     for name, email, password, role in demo_users:
-        u = db.query(User).filter(User.email == email).first()
+        u = db.query(User).filter(func.lower(User.email) == email.lower()).first()
         if not u:
             u = User(
                 name=name,
@@ -68,7 +69,7 @@ def seed_demo_data(db: Session):
     # -----------------------
     super_email = "superadmin@local"
     super_password = "superadmin123"
-    super_user = db.query(User).filter(User.email == super_email).first()
+    super_user = db.query(User).filter(func.lower(User.email) == super_email.lower()).first()
     if not super_user:
         db.add(
             User(

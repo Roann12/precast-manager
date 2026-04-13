@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
@@ -14,7 +14,7 @@ export default function Login() {
   const location = useLocation();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("password here");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +26,8 @@ export default function Login() {
     navigate(location.pathname + location.search, { replace: true, state: {} });
   }, [location.pathname, location.search, location.state, navigate]);
 
-  const onSubmit = async () => {
+  const onSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
@@ -43,9 +44,6 @@ export default function Login() {
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
       <Paper sx={{ p: 3, width: 420 }}>
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-          <Box component="img" src={precastLogo} alt="Precast Manager logo" sx={{ width: 96, height: 96, objectFit: "contain" }} />
-        </Box>
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
           Login
         </Typography>
@@ -56,40 +54,67 @@ export default function Login() {
           </Alert>
         )}
 
-        <TextField
-          label="Email"
-          fullWidth
-          size="small"
-          sx={{ mb: 2 }}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          label="Password"
-          fullWidth
-          type={showPassword ? "text" : "password"}
-          size="small"
-          sx={{ mb: 2 }}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword((v) => !v)}
-                  edge="end"
-                >
-                  {showPassword ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box component="form" onSubmit={(e) => void onSubmit(e)} noValidate>
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            fullWidth
+            size="small"
+            sx={{ mb: 2 }}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            fullWidth
+            size="small"
+            sx={{ mb: 2 }}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((v) => !v)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
 
-        <Button variant="contained" fullWidth disabled={loading || submitting} onClick={() => onSubmit()}>
-          {submitting ? "Signing in..." : "Sign in"}
-        </Button>
+          <Button type="submit" variant="contained" fullWidth disabled={loading || submitting}>
+            {submitting ? "Signing in..." : "Sign in"}
+          </Button>
+        </Box>
+
+        <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: "divider" }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5, lineHeight: 1.6 }}>
+            This system is for authorized users only. By signing in you confirm you are permitted to use this
+            application. The software is provided &ldquo;as is&rdquo; without warranty of any kind; use is at your own
+            risk.
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.2, mb: 1.5 }}>
+            Registered product by Roann Heunis
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Box
+              component="img"
+              src={precastLogo}
+              alt="Precast Manager logo"
+              sx={{ width: 72, height: 72, objectFit: "contain", opacity: 0.92 }}
+            />
+          </Box>
+        </Box>
 
         {/* Intentionally no demo credentials in production UI. */}
       </Paper>

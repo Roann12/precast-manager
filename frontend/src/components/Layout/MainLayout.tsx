@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function MainLayout({ children }: Props) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const drawerWidth = 240;

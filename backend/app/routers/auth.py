@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 import secrets
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_factory_id, get_current_user, require_role
@@ -40,7 +41,8 @@ def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    email_key = form_data.username.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == email_key).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
@@ -175,13 +177,14 @@ def create_user_for_admin(
     if current_user.factory_id is not None and body.factory_id != current_user.factory_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create users in a different factory")
 
-    existing = db.query(User).filter(User.email == body.email).first()
+    email_norm = body.email.strip().lower()
+    existing = db.query(User).filter(func.lower(User.email) == email_norm).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
 
     u = User(
         name=body.name,
-        email=body.email,
+        email=email_norm,
         password_hash=get_password_hash(body.password),
         role=body.role,
         factory_id=body.factory_id,
@@ -244,7 +247,8 @@ def onboard_factory(
     if existing_factory:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Factory name already exists")
 
-    existing_user = db.query(User).filter(User.email == body.admin_email).first()
+    admin_email_norm = body.admin_email.strip().lower()
+    existing_user = db.query(User).filter(func.lower(User.email) == admin_email_norm).first()
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin email already exists")
 
@@ -255,7 +259,7 @@ def onboard_factory(
 
     admin_user = User(
         name=body.admin_name,
-        email=body.admin_email,
+        email=admin_email_norm,
         password_hash=get_password_hash(body.admin_password),
         role="admin",
         factory_id=factory.id,

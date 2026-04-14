@@ -662,6 +662,24 @@ def mark_cast(
         cast.batch_id = f"HC-{fid}-{cast.id}-{uuid4().hex[:6].upper()}"
     db.commit()
     db.refresh(cast)
+    log_wetcasting_activity(
+        db,
+        factory_id=fid,
+        user_id=current_user.id,
+        section="hollowcore",
+        action="mark_cast",
+        entity_type="hollowcore_cast",
+        entity_id=cast.id,
+        details={
+            "element_id": cast.element_id,
+            "batch_id": cast.batch_id,
+            "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+            "bed_id": cast.bed_id,
+            "cast_slot_index": cast.cast_slot_index,
+            "quantity": cast.quantity,
+        },
+    )
+    db.commit()
     return cast
 
 
@@ -697,6 +715,24 @@ def mark_cut(
     cast.status = "cut"
     db.commit()
     db.refresh(cast)
+    log_wetcasting_activity(
+        db,
+        factory_id=fid,
+        user_id=current_user.id,
+        section="hollowcore",
+        action="mark_cut",
+        entity_type="hollowcore_cast",
+        entity_id=cast.id,
+        details={
+            "element_id": cast.element_id,
+            "batch_id": cast.batch_id,
+            "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+            "bed_id": cast.bed_id,
+            "cast_slot_index": cast.cast_slot_index,
+            "quantity": cast.quantity,
+        },
+    )
+    db.commit()
     return cast
 
 
@@ -744,5 +780,24 @@ def complete_cast(
     cast.status = "completed"
     db.commit()
     db.refresh(cast)
+    log_wetcasting_activity(
+        db,
+        factory_id=fid,
+        user_id=current_user.id,
+        section="hollowcore",
+        action="complete_cast",
+        entity_type="hollowcore_cast",
+        entity_id=cast.id,
+        details={
+            "element_id": cast.element_id,
+            "batch_id": cast.batch_id,
+            "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+            "bed_id": cast.bed_id,
+            "cast_slot_index": cast.cast_slot_index,
+            "quantity": cast.quantity,
+            "location_id": body.location_id,
+        },
+    )
+    db.commit()
     return {"message": "ok", "cast": cast}
 

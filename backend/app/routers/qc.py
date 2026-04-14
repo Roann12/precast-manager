@@ -17,6 +17,7 @@ from ..models.mix_design import MixDesign
 from ..models.hollowcore_cast import HollowcoreCast
 from ..models.hollowcore_settings import HollowcoreSettings
 from ..services.qc_lab_queue import build_qc_lab_queue
+from ..services.wetcasting_activity import log_wetcasting_activity
 
 router = APIRouter(prefix="/qc", tags=["qc"])
 
@@ -173,6 +174,25 @@ def create_test(
     db.add(test)
     db.commit()
     db.refresh(test)
+    log_wetcasting_activity(
+        db,
+        factory_id=factory_id,
+        user_id=current_user.id,
+        section="qc",
+        action="create_test",
+        entity_type="quality_test",
+        entity_id=test.id,
+        details={
+            "batch_id": test.batch_id,
+            "element_id": test.element_id,
+            "age_days": test.age_days,
+            "passed": test.passed,
+            "avg_strength_mpa": test.avg_strength_mpa,
+            "required_strength_mpa": test.required_strength_mpa,
+            "test_date": test.test_date.isoformat() if test.test_date else None,
+        },
+    )
+    db.commit()
     return test
 
 

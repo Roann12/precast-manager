@@ -29,6 +29,7 @@ const SECTION_OPTIONS = [
   { value: "planner", label: "Planner" },
   { value: "production", label: "Production" },
   { value: "hollowcore", label: "Hollowcore" },
+  { value: "qc", label: "QC" },
   { value: "dispatch", label: "Dispatch" },
   { value: "yard", label: "Yard" },
 ] as const;

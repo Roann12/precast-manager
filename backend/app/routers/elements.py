@@ -57,6 +57,22 @@ def create_element(
         entity_id=db_element.id,
         details={"element_mark": db_element.element_mark, "quantity": db_element.quantity},
     )
+    if db_element.panel_length_mm is not None and db_element.slab_thickness_mm is not None:
+        log_wetcasting_activity(
+            db,
+            factory_id=factory_id,
+            user_id=current_user.id,
+            section="hollowcore",
+            action="create_element",
+            entity_type="element",
+            entity_id=db_element.id,
+            details={
+                "element_mark": db_element.element_mark,
+                "quantity": db_element.quantity,
+                "panel_length_mm": db_element.panel_length_mm,
+                "slab_thickness_mm": db_element.slab_thickness_mm,
+            },
+        )
     db.commit()
     return db_element
 

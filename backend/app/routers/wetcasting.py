@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -11,6 +11,15 @@ from ..models.user import User
 from ..models.wetcasting_activity import WetcastingActivity
 
 router = APIRouter(prefix="/wetcasting", tags=["wetcasting"])
+
+
+def _to_utc_iso_z(dt: datetime) -> str:
+    # DB values are stored as UTC-naive; mark as UTC explicitly for client parsing.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat().replace("+00:00", "Z")
 
 
 @router.get("/activity")
@@ -46,7 +55,7 @@ def list_activity(
     return [
         {
             "id": r.id,
-            "created_at": r.created_at,
+            "created_at": _to_utc_iso_z(r.created_at),
             "section": r.section,
             "action": r.action,
             "entity_type": r.entity_type,

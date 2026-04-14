@@ -44,6 +44,20 @@ export default function Login() {
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
       <Paper sx={{ p: 3, width: 420 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 2.5 }}>
+          <Box
+            component="img"
+            src={precastLogo}
+            alt="Precast Manager logo"
+            sx={{
+              width: "100%",
+              maxWidth: 240,
+              height: "auto",
+              objectFit: "contain",
+              opacity: 0.95,
+            }}
+          />
+        </Box>
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
           Login
         </Typography>
@@ -103,17 +117,9 @@ export default function Login() {
             application. The software is provided &ldquo;as is&rdquo; without warranty of any kind; use is at your own
             risk.
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.2, mb: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.2 }}>
             Registered product by Roann Heunis
           </Typography>
-          <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <Box
-              component="img"
-              src={precastLogo}
-              alt="Precast Manager logo"
-              sx={{ width: 72, height: 72, objectFit: "contain", opacity: 0.92 }}
-            />
-          </Box>
         </Box>
 
         {/* Intentionally no demo credentials in production UI. */}

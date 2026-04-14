@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
+  Chip,
   Grid,
   MenuItem,
   Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -112,6 +114,28 @@ export default function HollowcoreElements() {
       else next[el.id] = "planned";
     }
     return next;
+  }, [items, castsRegistryQuery.data]);
+
+  const totals = useMemo(() => {
+    const completedByElementId: Record<number, number> = {};
+    for (const row of castsRegistryQuery.data ?? []) {
+      const elementId = Number(row.element_id);
+      if (!Number.isFinite(elementId)) continue;
+      if (String(row.status ?? "planned") !== "completed") continue;
+      const qty = Number(row.quantity ?? 0);
+      completedByElementId[elementId] = (completedByElementId[elementId] ?? 0) + qty;
+    }
+
+    return items.reduce(
+      (acc, el) => {
+        const plannedQty = Number(el.quantity ?? 0);
+        const completedQty = Number(completedByElementId[el.id] ?? 0);
+        acc.completed += completedQty;
+        acc.remaining += Math.max(plannedQty - completedQty, 0);
+        return acc;
+      },
+      { completed: 0, remaining: 0 }
+    );
   }, [items, castsRegistryQuery.data]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,6 +287,11 @@ export default function HollowcoreElements() {
           Failed to load hollowcore elements.
         </Alert>
       ) : null}
+
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Chip color="success" label={`Finished: ${totals.completed}`} />
+        <Chip color="warning" label={`Still planned: ${totals.remaining}`} />
+      </Stack>
 
       {showAdd ? (
         <form onSubmit={submit}>

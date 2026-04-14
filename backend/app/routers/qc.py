@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from ..database import get_db
 from ..auth.dependencies import get_current_factory_id, require_role
@@ -70,13 +71,9 @@ def create_test(
         .filter(Element.factory_id == factory_id)
         .filter(QualityTest.batch_id == body.batch_id)
         .filter(QualityTest.age_days == body.age_days)
+        .order_by(QualityTest.test_date.desc(), QualityTest.id.desc())
         .first()
     )
-    if existing_same_age:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Cube result already exists for batch {body.batch_id} at {body.age_days} day(s).",
-        )
 
     # Enforce: can only enter results once required age has elapsed since cast date.
     is_hollowcore_batch = False
@@ -103,6 +100,19 @@ def create_test(
             cast_date = hollow_sched.cast_date
             batch_element_id = hollow_sched.element_id
             is_hollowcore_batch = True
+
+    allow_hollowcore_retest = False
+    if existing_same_age:
+        allow_hollowcore_retest = (
+            is_hollowcore_batch
+            and body.age_days == 1
+            and existing_same_age.passed is False
+        )
+        if not allow_hollowcore_retest:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cube result already exists for batch {body.batch_id} at {body.age_days} day(s).",
+            )
 
     if cast_date is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown batch_id")
@@ -151,28 +161,57 @@ def create_test(
     else:
         avg = (body.cube1_strength_mpa + body.cube2_strength_mpa + body.cube3_strength_mpa) / 3.0
 
-    test = QualityTest(
-        element_id=body.element_id,
-        batch_id=body.batch_id,
-        mix_design_id=element_row.mix_design_id,
-        test_type=body.test_type,
-        result=f"{avg:g} MPa avg @ {body.age_days}d",
-        age_days=body.age_days,
-        cube1_weight_kg=body.cube1_weight_kg,
-        cube1_strength_mpa=body.cube1_strength_mpa,
-        cube2_weight_kg=body.cube2_weight_kg,
-        cube2_strength_mpa=body.cube2_strength_mpa,
-        cube3_weight_kg=body.cube3_weight_kg,
-        cube3_strength_mpa=body.cube3_strength_mpa,
-        avg_strength_mpa=avg,
-        measured_strength_mpa=avg,
-        required_strength_mpa=req_val,
-        passed=passed,
-        test_date=body.test_date,
-        notes=body.notes,
-    )
-    db.add(test)
-    db.commit()
+    if allow_hollowcore_retest and existing_same_age is not None:
+        # Table enforces unique (batch_id, age_days): overwrite failed 1-day value with retest.
+        test = existing_same_age
+        test.element_id = body.element_id
+        test.batch_id = body.batch_id
+        test.mix_design_id = element_row.mix_design_id
+        test.test_type = body.test_type
+        test.result = f"{avg:g} MPa avg @ {body.age_days}d"
+        test.age_days = body.age_days
+        test.cube1_weight_kg = body.cube1_weight_kg
+        test.cube1_strength_mpa = body.cube1_strength_mpa
+        test.cube2_weight_kg = body.cube2_weight_kg
+        test.cube2_strength_mpa = body.cube2_strength_mpa
+        test.cube3_weight_kg = body.cube3_weight_kg
+        test.cube3_strength_mpa = body.cube3_strength_mpa
+        test.avg_strength_mpa = avg
+        test.measured_strength_mpa = avg
+        test.required_strength_mpa = req_val
+        test.passed = passed
+        test.test_date = body.test_date
+        test.notes = body.notes
+    else:
+        test = QualityTest(
+            element_id=body.element_id,
+            batch_id=body.batch_id,
+            mix_design_id=element_row.mix_design_id,
+            test_type=body.test_type,
+            result=f"{avg:g} MPa avg @ {body.age_days}d",
+            age_days=body.age_days,
+            cube1_weight_kg=body.cube1_weight_kg,
+            cube1_strength_mpa=body.cube1_strength_mpa,
+            cube2_weight_kg=body.cube2_weight_kg,
+            cube2_strength_mpa=body.cube2_strength_mpa,
+            cube3_weight_kg=body.cube3_weight_kg,
+            cube3_strength_mpa=body.cube3_strength_mpa,
+            avg_strength_mpa=avg,
+            measured_strength_mpa=avg,
+            required_strength_mpa=req_val,
+            passed=passed,
+            test_date=body.test_date,
+            notes=body.notes,
+        )
+        db.add(test)
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cube result already exists for batch {body.batch_id} at {body.age_days} day(s).",
+        ) from e
     db.refresh(test)
     log_wetcasting_activity(
         db,

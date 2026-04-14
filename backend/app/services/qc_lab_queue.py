@@ -58,6 +58,7 @@ def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
             HollowcoreCast.cast_date.label("production_date"),
             HollowcoreCast.quantity.label("quantity"),
             HollowcoreCast.batch_id.label("batch_id"),
+            HollowcoreCast.status.label("cast_status"),
             Element.id.label("element_id"),
             Element.element_mark,
             Element.element_type,
@@ -70,7 +71,7 @@ def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
         .join(Element, HollowcoreCast.element_id == Element.id)
         .outerjoin(MixDesign, Element.mix_design_id == MixDesign.id)
         .join(Project, Element.project_id == Project.id)
-        .filter(HollowcoreCast.status.in_(["cast", "cut", "completed"]))
+        .filter(HollowcoreCast.status.in_(["cast", "cut", "completed", "hold_qc_1d_fail"]))
         .filter(HollowcoreCast.factory_id == factory_id)
         .filter(Element.factory_id == factory_id)
         .filter(HollowcoreCast.batch_id.isnot(None))
@@ -123,6 +124,7 @@ def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
             "mix_design_name": r.mix_design_name,
             "project_id": r.project_id,
             "project_name": r.project_name,
+            "is_retest": bool(getattr(r, "cast_status", None) == "hold_qc_1d_fail" and age == 1),
         }
 
     today_items: List[Dict[str, Any]] = []
@@ -135,9 +137,13 @@ def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
 
         ages = (1, 7, 28) if str(r.batch_id) in hollowcore_batch_ids else (7, 28)
         for age in ages:
-            if (r.batch_id, age) in existing:
+            is_hc_hold_for_retest = str(r.batch_id) in hollowcore_batch_ids and age == 1 and getattr(r, "cast_status", None) == "hold_qc_1d_fail"
+            if (r.batch_id, age) in existing and not is_hc_hold_for_retest:
                 continue
-            if age == 1 and str(r.batch_id) in hollowcore_batch_ids:
+            if is_hc_hold_for_retest:
+                # Retests are urgent and should be visible in today's worklist.
+                due = today
+            elif age == 1 and str(r.batch_id) in hollowcore_batch_ids:
                 due = r.production_date
             else:
                 due = r.production_date + timedelta(days=age)

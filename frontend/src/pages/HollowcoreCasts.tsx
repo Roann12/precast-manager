@@ -18,6 +18,7 @@ import {
   Typography,
 } from "@mui/material";
 import api from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import {
   ELEMENTS_INCLUDE_INACTIVE_KEY,
   PROJECTS_OPTIONS_KEY,
@@ -65,11 +66,12 @@ function formatError(err: unknown, fallback: string) {
   return anyErr?.response?.data?.detail || anyErr?.response?.data?.message || anyErr?.message || fallback;
 }
 
-function statusChipColor(status: string): "default" | "warning" | "info" | "success" {
+function statusChipColor(status: string): "default" | "warning" | "info" | "success" | "error" {
   if (status === "planned") return "default";
   if (status === "cast") return "info";
   if (status === "cut") return "warning";
   if (status === "completed") return "success";
+  if (status === "hold_qc_1d_fail") return "error";
   return "default";
 }
 
@@ -78,6 +80,7 @@ function statusSegmentBg(status: string): string {
   if (status === "cut") return "#FFE0B2";
   if (status === "cast") return "#BBDEFB";
   if (status === "planned") return "#ECEFF1";
+  if (status === "hold_qc_1d_fail") return "#FFCDD2";
   return "#F5F5F5";
 }
 
@@ -85,6 +88,7 @@ function statusSegmentBorder(status: string): string {
   if (status === "completed") return "#2E7D32";
   if (status === "cut") return "#EF6C00";
   if (status === "cast") return "#1565C0";
+  if (status === "hold_qc_1d_fail") return "#B71C1C";
   return "#90A4AE";
 }
 
@@ -454,6 +458,8 @@ function HollowcoreBedLayoutFallback({
 }
 
 export default function HollowcoreCasts() {
+  const { user } = useAuth();
+  const isAdmin = String(user?.role ?? "").toLowerCase() === "admin";
   const qc = useQueryClient();
   const [day, setDay] = useState(todayStr());
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -591,6 +597,39 @@ export default function HollowcoreCasts() {
     }
   };
 
+  const requestRetest = async (id: number) => {
+    const reason = window.prompt("Retest reason (required):", "1-day failed, priority retest requested");
+    if (!reason || !reason.trim()) return;
+    try {
+      setProcessing(true);
+      setErr(null);
+      await api.post(`/hollowcore/casts/${id}/request-retest`, { reason: reason.trim() });
+      setSelected({});
+      await refreshCasts();
+    } catch (e) {
+      setErr(formatError(e, "Failed to request retest"));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const markCutOverride = async (id: number) => {
+    const reason = window.prompt("Override reason (required):", "Approved conditional release");
+    if (!reason || !reason.trim()) return;
+    if (!window.confirm("Proceed with admin override and mark this cast as cut?")) return;
+    try {
+      setProcessing(true);
+      setErr(null);
+      await api.post(`/hollowcore/casts/${id}/mark-cut-override`, { reason: reason.trim() });
+      setSelected({});
+      await refreshCasts();
+    } catch (e) {
+      setErr(formatError(e, "Failed to override cut"));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const completeSelected = async () => {
     if (!locationId) {
       setErr("Select a yard location first");
@@ -646,6 +685,7 @@ export default function HollowcoreCasts() {
             <MenuItem value="">All</MenuItem>
             <MenuItem value="planned">Planned</MenuItem>
             <MenuItem value="cast">Cast</MenuItem>
+            <MenuItem value="hold_qc_1d_fail">Hold (1d fail)</MenuItem>
             <MenuItem value="cut">Cut</MenuItem>
             <MenuItem value="completed">Completed</MenuItem>
           </TextField>
@@ -702,6 +742,9 @@ export default function HollowcoreCasts() {
               .reduce((acc, c) => acc + Number(c.quantity ?? 0), 0);
             const castQty = rows.filter((c) => c.status === "cast").reduce((acc, c) => acc + Number(c.quantity ?? 0), 0);
             const cutQty = rows.filter((c) => c.status === "cut").reduce((acc, c) => acc + Number(c.quantity ?? 0), 0);
+            const holdQty = rows
+              .filter((c) => c.status === "hold_qc_1d_fail")
+              .reduce((acc, c) => acc + Number(c.quantity ?? 0), 0);
             const plannedQty = rows
               .filter((c) => c.status === "planned")
               .reduce((acc, c) => acc + Number(c.quantity ?? 0), 0);
@@ -745,6 +788,7 @@ export default function HollowcoreCasts() {
                       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 0.75 }}>
                         <Chip size="small" color={statusChipColor("planned")} label={`Planned ${plannedQty}`} />
                         <Chip size="small" color={statusChipColor("cast")} label={`Cast ${castQty}`} />
+                        <Chip size="small" color={statusChipColor("hold_qc_1d_fail")} label={`Hold ${holdQty}`} />
                         <Chip size="small" color={statusChipColor("cut")} label={`Cut ${cutQty}`} />
                         <Chip size="small" color={statusChipColor("completed")} label={`Completed ${completedQty}`} />
                       </Stack>
@@ -759,6 +803,7 @@ export default function HollowcoreCasts() {
                         const isDone = c.status === "completed";
                         const st = c.batch_id ? qcStatus[c.batch_id] : undefined;
                         const ages = st?.ages ?? {};
+                        const oneDayFailed = ages["1"] === false;
                         const ageChip = (age: "1" | "7" | "28") => {
                           const v = ages[age];
                           if (v === true) return <Chip label={`${age}d PASS`} color="success" size="small" />;
@@ -850,13 +895,18 @@ export default function HollowcoreCasts() {
                                     Due: {due ?? "-"}
                                   </Typography>
                                   <Typography variant="caption">Status: {c.status}</Typography>
+                                  {(c.status === "hold_qc_1d_fail" || oneDayFailed) && (
+                                    <Alert severity="error" sx={{ mt: 0.5 }}>
+                                      1-day cube failed. Bed is on HOLD until retest passes or admin override is approved.
+                                    </Alert>
+                                  )}
                                 </Stack>
 
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                   <Button
                                     variant="outlined"
                                     size="small"
-                                    disabled={isDone || processing || c.status === "cast" || c.status === "cut"}
+                                    disabled={isDone || processing || c.status !== "planned"}
                                     onClick={() => markCast(c.id)}
                                   >
                                     Mark Cast
@@ -864,10 +914,28 @@ export default function HollowcoreCasts() {
                                   <Button
                                     variant="outlined"
                                     size="small"
-                                    disabled={isDone || processing || c.status !== "cast" || !st?.cut_allowed}
+                                    disabled={isDone || processing || !["cast", "hold_qc_1d_fail"].includes(c.status) || !st?.cut_allowed}
                                     onClick={() => markCut(c.id)}
                                   >
                                     Mark Cut
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    color="warning"
+                                    size="small"
+                                    disabled={isDone || processing || !["cast", "hold_qc_1d_fail"].includes(c.status)}
+                                    onClick={() => requestRetest(c.id)}
+                                  >
+                                    Request Retest
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    disabled={isDone || processing || c.status !== "hold_qc_1d_fail" || !isAdmin}
+                                    onClick={() => markCutOverride(c.id)}
+                                  >
+                                    Admin Override Cut
                                   </Button>
                                   <Button
                                     variant="contained"

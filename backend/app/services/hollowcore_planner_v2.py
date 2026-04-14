@@ -70,71 +70,14 @@ def generate_plan_rows(
     # Remaining qty per element
     bed_ids = [int(b.id) for b in beds if b is not None and b.id is not None]
     # Slots that are already occupied are considered locked.
-    # - non-planned rows are immutable in planner
-    # - planned rows should be preserved on generate (additive behavior)
+    # - non-planned rows are immutable in planner and returned as-is in the draft
+    # - planned rows are intentionally re-generated for the selected window
+    #   (so added/edited beds can rebalance existing draft plans)
     locked_slots: set[tuple[date, int, int]] = set()
-    existing_planned_casts: list[dict[str, Any]] = []
+    locked_non_planned_casts: list[dict[str, Any]] = []
     if bed_ids:
-        planned_rows = (
-            db.query(HollowcoreCast)
-            .filter(HollowcoreCast.factory_id == factory_id)
-            .filter(HollowcoreCast.cast_date >= start_date)
-            .filter(HollowcoreCast.cast_date <= end_date)
-            .filter(HollowcoreCast.status == "planned")
-            .filter(
-                (HollowcoreCast.bed_id.in_(bed_ids))
-                | (HollowcoreCast.bed_number.in_(bed_ids))
-            )
-            .all()
-        )
-        planned_element_ids = {int(c.element_id) for c in planned_rows if c.element_id is not None}
-        planned_element_workdays: dict[int, tuple[bool, bool]] = {}
-        if planned_element_ids:
-            element_project_rows = (
-                db.query(Element.id, Project.work_saturday, Project.work_sunday)
-                .join(Project, Project.id == Element.project_id)
-                .filter(Element.factory_id == factory_id)
-                .filter(Element.id.in_(planned_element_ids))
-                .all()
-            )
-            for eid, work_sat, work_sun in element_project_rows:
-                planned_element_workdays[int(eid)] = (bool(work_sat), bool(work_sun))
-        for c in planned_rows:
-            cast_bed = c.bed_id if c.bed_id is not None else c.bed_number
-            if cast_bed is None or c.cast_slot_index is None or c.cast_date is None:
-                continue
-            work_sat, work_sun = planned_element_workdays.get(int(c.element_id), (False, False))
-            if not _is_working_day_for_project(c.cast_date, work_sat, work_sun):
-                # Do not preserve old invalid planned rows (weekend/holiday rule changes).
-                # They are intentionally omitted from generated draft and will be removed on commit.
-                continue
-            slot_key = (c.cast_date, int(cast_bed), int(c.cast_slot_index))
-            locked_slots.add(slot_key)
-            existing_planned_casts.append(
-                {
-                    "id": c.id,
-                    "cast_date": c.cast_date,
-                    "bed_id": int(cast_bed),
-                    "cast_slot_index": int(c.cast_slot_index),
-                    "element_id": int(c.element_id),
-                    "panel_length_mm": int(c.panel_length_mm or 0),
-                    "slab_thickness_mm": int(c.slab_thickness_mm or 0),
-                    "quantity": int(c.quantity or 0),
-                    "used_length_mm": int(c.used_length_mm or (int(c.quantity or 0) * int(c.panel_length_mm or 0))),
-                    "waste_mm": int(c.waste_mm or 0),
-                    "status": "planned",
-                    "batch_id": c.batch_id,
-                }
-            )
-
         locked_rows = (
-            db.query(
-                HollowcoreCast.cast_date,
-                HollowcoreCast.bed_id,
-                HollowcoreCast.bed_number,
-                HollowcoreCast.cast_slot_index,
-                HollowcoreCast.status,
-            )
+            db.query(HollowcoreCast)
             .filter(HollowcoreCast.factory_id == factory_id)
             .filter(HollowcoreCast.cast_date >= start_date)
             .filter(HollowcoreCast.cast_date <= end_date)
@@ -150,7 +93,28 @@ def generate_plan_rows(
             cast_bed = r.bed_id if r.bed_id is not None else r.bed_number
             if cast_bed is None or r.cast_slot_index is None or r.cast_date is None:
                 continue
-            locked_slots.add((r.cast_date, int(cast_bed), int(r.cast_slot_index)))
+            bed_id_int = int(cast_bed)
+            slot_index_int = int(r.cast_slot_index)
+            locked_slots.add((r.cast_date, bed_id_int, slot_index_int))
+            locked_non_planned_casts.append(
+                {
+                    "id": r.id,
+                    "cast_date": r.cast_date,
+                    "bed_id": bed_id_int,
+                    "cast_slot_index": slot_index_int,
+                    "element_id": int(r.element_id),
+                    "panel_length_mm": int(r.panel_length_mm or 0),
+                    "slab_thickness_mm": int(r.slab_thickness_mm or 0),
+                    "quantity": int(r.quantity or 0),
+                    "used_length_mm": int(
+                        r.used_length_mm
+                        or (int(r.quantity or 0) * int(r.panel_length_mm or 0))
+                    ),
+                    "waste_mm": int(r.waste_mm or 0),
+                    "status": r.status,
+                    "batch_id": r.batch_id,
+                }
+            )
 
     casted: dict[int, int] = dict(
         db.query(
@@ -161,6 +125,27 @@ def generate_plan_rows(
         .group_by(HollowcoreCast.element_id)
         .all()
     )
+    # Replanning replaces planned rows in the selected window on selected beds,
+    # so those quantities must not reduce remaining demand during simulation.
+    if bed_ids:
+        replanned_qty_rows = (
+            db.query(
+                HollowcoreCast.element_id,
+                func.coalesce(func.sum(HollowcoreCast.quantity), 0),
+            )
+            .filter(HollowcoreCast.factory_id == factory_id)
+            .filter(HollowcoreCast.status == "planned")
+            .filter(HollowcoreCast.cast_date >= start_date)
+            .filter(HollowcoreCast.cast_date <= end_date)
+            .filter((HollowcoreCast.bed_id.in_(bed_ids)) | (HollowcoreCast.bed_number.in_(bed_ids)))
+            .group_by(HollowcoreCast.element_id)
+            .all()
+        )
+        for eid, qty in replanned_qty_rows:
+            key = int(eid)
+            casted[key] = int(casted.get(key, 0) or 0) - int(qty or 0)
+            if casted[key] < 0:
+                casted[key] = 0
 
     elements = (
         db.query(Element)
@@ -208,9 +193,8 @@ def generate_plan_rows(
             }
         )
 
-    casts: list[dict[str, Any]] = list(existing_planned_casts)
-    # When every element is already fully cast in the DB, there is nothing new to place —
-    # but we must still return existing planned rows in range (otherwise draft/auto UI is empty).
+    casts: list[dict[str, Any]] = list(locked_non_planned_casts)
+    # When every element is already fully cast in the DB, there is nothing to place.
     if not remaining:
         return casts, []
     if not beds:

@@ -21,6 +21,7 @@ import {
   useTheme,
 } from "@mui/material";
 import api from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import {
   ELEMENTS_ALL_KEY,
   ELEMENTS_INCLUDE_INACTIVE_KEY,
@@ -309,6 +310,8 @@ function mapServerCastsToPlanned(raw: unknown[], bedListForMap: Bed[], defaultWa
 type GenPayload = { start: string; end: string; waste: number };
 
 export default function HollowcorePlanner() {
+  const { user } = useAuth();
+  const isAdmin = String(user?.role ?? "").toLowerCase() === "admin";
   const theme = useTheme();
   const isNarrowPlanner = useMediaQuery(theme.breakpoints.down("md"));
   const bedColPx = isNarrowPlanner ? 260 : 320;
@@ -336,6 +339,7 @@ export default function HollowcorePlanner() {
   const [lateOnly, setLateOnly] = useState(false);
   const [showBedVisualization, setShowBedVisualization] = useState(true);
   const [autoGenerate, setAutoGenerate] = useState(true);
+  const [castActionBusy, setCastActionBusy] = useState<number | null>(null);
 
   const elementsQuery = useQuery({
     queryKey: ELEMENTS_INCLUDE_INACTIVE_KEY,
@@ -448,10 +452,10 @@ export default function HollowcorePlanner() {
   });
 
   useEffect(() => {
-    if (!autoGenerate || !settingsQuery.isFetched) return;
+    if (!autoGenerate || !settingsQuery.isFetched || !bedsQuery.isFetched) return;
     generateMutation.mutate({ start, end, waste: defaultWasteMm });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when range / mode / waste changes
-  }, [start, end, autoGenerate, defaultWasteMm, settingsQuery.isFetched]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when range / mode / waste / beds changes
+  }, [start, end, autoGenerate, defaultWasteMm, settingsQuery.isFetched, bedsQuery.isFetched, bedsQuery.dataUpdatedAt]);
 
   useEffect(() => {
     if (autoGenerate) return;
@@ -575,6 +579,36 @@ export default function HollowcorePlanner() {
   const refreshPlanner = () => {
     if (autoGenerate) triggerGenerate();
     else void rangeCastsQuery.refetch();
+  };
+
+  const runCastAction = async (castId: number, endpoint: string, payload?: Record<string, unknown>) => {
+    try {
+      setErr(null);
+      setCastActionBusy(castId);
+      await api.post(`/hollowcore/casts/${castId}/${endpoint}`, payload ?? {});
+      await Promise.all([
+        qClient.invalidateQueries({ queryKey: HOLLOWCORE_CASTS_REGISTRY_KEY }),
+        qClient.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
+      ]);
+      refreshPlanner();
+    } catch (e) {
+      setErr(formatError(e, "Failed to update cast status"));
+    } finally {
+      setCastActionBusy(null);
+    }
+  };
+
+  const requestRetest = async (castId: number) => {
+    const reason = window.prompt("Retest reason (required):", "1-day failed, priority retest requested");
+    if (!reason || !reason.trim()) return;
+    await runCastAction(castId, "request-retest", { reason: reason.trim() });
+  };
+
+  const markCutOverride = async (castId: number) => {
+    const reason = window.prompt("Override reason (required):", "Approved conditional release");
+    if (!reason || !reason.trim()) return;
+    if (!window.confirm("Proceed with admin override and mark this cast as cut?")) return;
+    await runCastAction(castId, "mark-cut-override", { reason: reason.trim() });
   };
 
   const commit = () => {
@@ -1362,6 +1396,54 @@ export default function HollowcorePlanner() {
                                         size="small"
                                       />
                                     ) : null}
+                                    {(() => {
+                                      if (!c.id) return null;
+                                      const statusNow = c.status ?? "planned";
+                                      const st = c.batch_id ? qcStatus[c.batch_id] : undefined;
+                                      const busy = castActionBusy === c.id || loading;
+                                      return (
+                                        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            disabled={busy || statusNow !== "planned"}
+                                            onClick={() => void runCastAction(c.id!, "mark-cast")}
+                                          >
+                                            Mark cast
+                                          </Button>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            disabled={
+                                              busy ||
+                                              !["cast", "hold_qc_1d_fail"].includes(statusNow) ||
+                                              !Boolean(st?.cut_allowed)
+                                            }
+                                            onClick={() => void runCastAction(c.id!, "mark-cut")}
+                                          >
+                                            Mark cut
+                                          </Button>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="warning"
+                                            disabled={busy || !["cast", "hold_qc_1d_fail"].includes(statusNow)}
+                                            onClick={() => void requestRetest(c.id!)}
+                                          >
+                                            Request retest
+                                          </Button>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="error"
+                                            disabled={busy || statusNow !== "hold_qc_1d_fail" || !isAdmin}
+                                            onClick={() => void markCutOverride(c.id!)}
+                                          >
+                                            Admin override
+                                          </Button>
+                                        </Stack>
+                                      );
+                                    })()}
 
                                     {due ? (
                                       <Typography variant="caption" color={isLate ? "error.main" : "text.secondary"}>

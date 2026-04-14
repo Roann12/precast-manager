@@ -61,6 +61,7 @@ type QcDueItem = {
   mix_design_name?: string | null;
   project_id: number;
   project_name: string;
+  is_retest?: boolean;
 };
 
 type QualityTestRow = {
@@ -164,6 +165,13 @@ export default function QC() {
   const [cube3Strength, setCube3Strength] = useState<string>("");
   const [testDate, setTestDate] = useState<string>(toLocalISODate());
   const [notes, setNotes] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  const queueItemLabel = (i: QcDueItem, includeDueDate = false) => {
+    const retestPrefix = i.is_retest ? "[Retest] " : "";
+    const duePart = includeDueDate ? ` • DUE ${i.due_date}` : "";
+    return `${retestPrefix}${i.age_days}d • ${i.batch_id} • ${i.project_name} • ${i.element_mark}${duePart} • cast ${i.production_date}`;
+  };
 
   useEffect(() => {
     if (projects.length > 0 && projectForResults === "") {
@@ -264,34 +272,47 @@ export default function QC() {
       return;
     }
 
-    await api.post("/qc/tests", {
-      element_id: selected.element_id,
-      batch_id: selected.batch_id,
-      age_days: ageDays,
-      cube1_weight_kg: w1,
-      cube1_strength_mpa: s1,
-      cube2_weight_kg: w2,
-      cube2_strength_mpa: s2,
-      cube3_weight_kg: w3,
-      cube3_strength_mpa: s3,
-      test_date: testDate,
-      notes: notes.trim() ? notes : null,
-    });
+    try {
+      setSaving(true);
+      await api.post("/qc/tests", {
+        element_id: selected.element_id,
+        batch_id: selected.batch_id,
+        age_days: ageDays,
+        cube1_weight_kg: w1,
+        cube1_strength_mpa: s1,
+        cube2_weight_kg: w2,
+        cube2_strength_mpa: s2,
+        cube3_weight_kg: w3,
+        cube3_strength_mpa: s3,
+        test_date: testDate,
+        notes: notes.trim() ? notes : null,
+      });
 
-    setCube1Weight("");
-    setCube1Strength("");
-    setCube2Weight("");
-    setCube2Strength("");
-    setCube3Weight("");
-    setCube3Strength("");
-    setNotes("");
-    const mid = selected.mix_design_id;
-    await Promise.all([
-      qc.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
-      qc.invalidateQueries({ queryKey: qcTestsKey(selected.batch_id) }),
-      mid != null ? qc.invalidateQueries({ queryKey: qcMixStatsKey(mid) }) : Promise.resolve(),
-      resultsProjectId != null ? qc.invalidateQueries({ queryKey: qcProjectResultsKey(resultsProjectId) }) : Promise.resolve(),
-    ]);
+      setCube1Weight("");
+      setCube1Strength("");
+      setCube2Weight("");
+      setCube2Strength("");
+      setCube3Weight("");
+      setCube3Strength("");
+      setNotes("");
+      const mid = selected.mix_design_id;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
+        qc.invalidateQueries({ queryKey: qcTestsKey(selected.batch_id) }),
+        mid != null ? qc.invalidateQueries({ queryKey: qcMixStatsKey(mid) }) : Promise.resolve(),
+        resultsProjectId != null ? qc.invalidateQueries({ queryKey: qcProjectResultsKey(resultsProjectId) }) : Promise.resolve(),
+      ]);
+      notify.success("QC result saved.");
+    } catch (e) {
+      notify.error(
+        (e as any)?.response?.data?.detail ||
+          (e as any)?.response?.data?.message ||
+          (e as any)?.message ||
+          "Failed to save QC result."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const pick = (item: QcDueItem) => {
@@ -343,8 +364,7 @@ export default function QC() {
                       onClick={() => pick(i)}
                       sx={{ justifyContent: "flex-start" }}
                     >
-                      {i.age_days}d • {i.batch_id} • {i.project_name} • {i.element_mark} • DUE {i.due_date} • cast{" "}
-                      {i.production_date}
+                      {queueItemLabel(i, true)}
                     </Button>
                   ))}
                 </Stack>
@@ -365,11 +385,12 @@ export default function QC() {
                   {due!.today.map((i) => (
                     <Button
                       key={`${i.batch_id}-${i.age_days}`}
+                      color={i.is_retest ? "warning" : "primary"}
                       variant={selected?.batch_id === i.batch_id && selected?.age_days === i.age_days ? "contained" : "outlined"}
                       onClick={() => pick(i)}
                       sx={{ justifyContent: "flex-start" }}
                     >
-                      {i.age_days}d • {i.batch_id} • {i.project_name} • {i.element_mark} • cast {i.production_date}
+                      {queueItemLabel(i)}
                     </Button>
                   ))}
                 </Stack>
@@ -390,11 +411,12 @@ export default function QC() {
                   {due!.tomorrow.map((i) => (
                     <Button
                       key={`${i.batch_id}-${i.age_days}`}
+                      color={i.is_retest ? "warning" : "primary"}
                       variant={selected?.batch_id === i.batch_id && selected?.age_days === i.age_days ? "contained" : "outlined"}
                       onClick={() => pick(i)}
                       sx={{ justifyContent: "flex-start" }}
                     >
-                      {i.age_days}d • {i.batch_id} • {i.project_name} • {i.element_mark} • cast {i.production_date}
+                      {queueItemLabel(i)}
                     </Button>
                   ))}
                 </Stack>
@@ -580,8 +602,8 @@ export default function QC() {
                   Too early to capture results. You can only enter a {selected.age_days}-day result on/after {selected.due_date}.
                 </Alert>
               )}
-              <Button variant="contained" disabled={!selected || !eligible} onClick={() => submit().catch(console.error)}>
-                Save result
+              <Button variant="contained" disabled={!selected || !eligible || saving} onClick={() => void submit()}>
+                {saving ? "Saving..." : "Save result"}
               </Button>
             </Grid>
           </Grid>

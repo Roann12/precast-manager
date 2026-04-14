@@ -287,13 +287,10 @@ def planner_generate(
     )
     if body.apply_to_db:
         bed_ids = [int(b.id) for b in beds if b and b.id is not None]
-        # Build key set from generated rows for id hydration and additive insert.
-        generated_keys: set[tuple[date, int, int, int]] = set()
-        for c in casts:
-            generated_keys.add((c["cast_date"], int(c["bed_id"]), int(c["cast_slot_index"]), int(c["element_id"])))
-
-        existing_rows = []
+        replaced = 0
         if bed_ids:
+            # Regeneration is authoritative for this window: replace prior planned rows
+            # so new/edited beds can rebalance existing draft casts.
             existing_rows = (
                 db.query(HollowcoreCast)
                 .filter(HollowcoreCast.factory_id == fid)
@@ -303,41 +300,17 @@ def planner_generate(
                 .filter((HollowcoreCast.bed_id.in_(bed_ids)) | (HollowcoreCast.bed_number.in_(bed_ids)))
                 .all()
             )
-
-        existing_map: dict[tuple[date, int, int, int], HollowcoreCast] = {}
-        for ex in existing_rows:
-            ex_bed = int(ex.bed_id if ex.bed_id is not None else ex.bed_number)
-            ex_key = (ex.cast_date, ex_bed, int(ex.cast_slot_index or 0), int(ex.element_id))
-            existing_map[ex_key] = ex
-
-        # Cleanup old invalid planned rows (weekend/public-holiday restrictions changed).
-        project_cache: dict[int, Project] = {}
-        cleaned = 0
-        for ex in existing_rows:
-            el = db.query(Element).filter(Element.id == ex.element_id, Element.factory_id == fid).first()
-            if not el:
-                continue
-            pid = int(el.project_id)
-            project = project_cache.get(pid)
-            if project is None:
-                project = db.query(Project).filter(Project.id == pid, Project.factory_id == fid).first()
-                if not project:
-                    continue
-                project_cache[pid] = project
-            if not _project_allows_cast_on_date(
-                cast_date=ex.cast_date,
-                work_saturday=bool(getattr(project, "work_saturday", False)),
-                work_sunday=bool(getattr(project, "work_sunday", False)),
-            ):
+            for ex in existing_rows:
                 db.delete(ex)
-                cleaned += 1
+                replaced += 1
+            if replaced > 0:
+                # Ensure unique slot keys are released before we insert regenerated rows.
+                db.flush()
 
         inserted = 0
         for c in casts:
-            k = (c["cast_date"], int(c["bed_id"]), int(c["cast_slot_index"]), int(c["element_id"]))
-            ex = existing_map.get(k)
-            if ex:
-                c["id"] = ex.id
+            if str(c.get("status") or "planned") != "planned":
+                # Locked non-planned rows are returned for UI context only; they already exist in DB.
                 continue
             bid = int(c["bed_id"])
             bed = next((b for b in beds if int(b.id) == bid), None)
@@ -362,7 +335,7 @@ def planner_generate(
             c["id"] = row.id
             inserted += 1
 
-        if inserted > 0 or cleaned > 0:
+        if inserted > 0 or replaced > 0:
             db.commit()
 
     return {"beds": beds, "casts": casts, "unplaced_remaining": unplaced_remaining}
@@ -710,7 +683,35 @@ def mark_cut(
     if not latest_1d:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 1-day cube result for this lane.")
     if latest_1d.passed is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="1-day cube result is not passing. Cannot mark cut.")
+        cast.status = "hold_qc_1d_fail"
+        db.commit()
+        db.refresh(cast)
+        log_wetcasting_activity(
+            db,
+            factory_id=fid,
+            user_id=current_user.id,
+            section="hollowcore",
+            action="auto_hold_qc_1d_fail",
+            entity_type="hollowcore_cast",
+            entity_id=cast.id,
+            details={
+                "element_id": cast.element_id,
+                "batch_id": cast.batch_id,
+                "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+                "bed_id": cast.bed_id,
+                "cast_slot_index": cast.cast_slot_index,
+                "quantity": cast.quantity,
+                "latest_1d_passed": latest_1d.passed,
+                "latest_1d_test_date": latest_1d.test_date.isoformat() if latest_1d.test_date else None,
+                "latest_1d_avg_strength_mpa": latest_1d.avg_strength_mpa,
+                "latest_1d_required_strength_mpa": latest_1d.required_strength_mpa,
+            },
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="1-day cube result failed. Cast moved to HOLD. Request retest or admin override.",
+        )
 
     cast.status = "cut"
     db.commit()
@@ -738,6 +739,14 @@ def mark_cut(
 
 class CompleteIn(BaseModel):
     location_id: int
+
+
+class RetestRequestIn(BaseModel):
+    reason: str
+
+
+class OverrideCutIn(BaseModel):
+    reason: str
 
 
 @router.post("/casts/{cast_id:int}/complete")
@@ -800,4 +809,108 @@ def complete_cast(
     )
     db.commit()
     return {"message": "ok", "cast": cast}
+
+
+@router.post("/casts/{cast_id:int}/request-retest")
+def request_retest(
+    cast_id: int,
+    body: RetestRequestIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["planner", "admin"])),
+):
+    fid = _require_factory_for_write(current_user)
+    cast = db.get(HollowcoreCast, cast_id)
+    if not cast or cast.factory_id != fid:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cast not found")
+    if not cast.batch_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cast has no cube set (batch). Mark cast first.")
+    reason = (body.reason or "").strip()
+    if not reason:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Retest reason is required.")
+
+    cast.status = "hold_qc_1d_fail"
+    db.commit()
+    db.refresh(cast)
+    log_wetcasting_activity(
+        db,
+        factory_id=fid,
+        user_id=current_user.id,
+        section="hollowcore",
+        action="request_retest",
+        entity_type="hollowcore_cast",
+        entity_id=cast.id,
+        details={
+            "element_id": cast.element_id,
+            "batch_id": cast.batch_id,
+            "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+            "bed_id": cast.bed_id,
+            "cast_slot_index": cast.cast_slot_index,
+            "quantity": cast.quantity,
+            "reason": reason,
+        },
+    )
+    db.commit()
+    return {"message": "Retest requested", "cast": cast}
+
+
+@router.post("/casts/{cast_id:int}/mark-cut-override")
+def mark_cut_override(
+    cast_id: int,
+    body: OverrideCutIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"])),
+):
+    from ..models.quality import QualityTest
+
+    fid = _require_factory_for_write(current_user)
+    cast = db.get(HollowcoreCast, cast_id)
+    if not cast or cast.factory_id != fid:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cast not found")
+    if cast.status not in ("cast", "hold_qc_1d_fail"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cast must be in cast/hold status to override cut.")
+    if not cast.batch_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cast has no cube set (batch). Mark cast first.")
+    reason = (body.reason or "").strip()
+    if not reason:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Override reason is required.")
+
+    latest_1d = (
+        db.query(QualityTest)
+        .join(Element, QualityTest.element_id == Element.id)
+        .filter(Element.factory_id == fid)
+        .filter(QualityTest.batch_id == cast.batch_id)
+        .filter(QualityTest.age_days == 1)
+        .order_by(QualityTest.test_date.desc(), QualityTest.id.desc())
+        .first()
+    )
+    if not latest_1d:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 1-day cube result for this lane.")
+
+    cast.status = "cut"
+    db.commit()
+    db.refresh(cast)
+    log_wetcasting_activity(
+        db,
+        factory_id=fid,
+        user_id=current_user.id,
+        section="hollowcore",
+        action="mark_cut_override",
+        entity_type="hollowcore_cast",
+        entity_id=cast.id,
+        details={
+            "element_id": cast.element_id,
+            "batch_id": cast.batch_id,
+            "cast_date": cast.cast_date.isoformat() if cast.cast_date else None,
+            "bed_id": cast.bed_id,
+            "cast_slot_index": cast.cast_slot_index,
+            "quantity": cast.quantity,
+            "override_reason": reason,
+            "latest_1d_passed": latest_1d.passed,
+            "latest_1d_test_date": latest_1d.test_date.isoformat() if latest_1d.test_date else None,
+            "latest_1d_avg_strength_mpa": latest_1d.avg_strength_mpa,
+            "latest_1d_required_strength_mpa": latest_1d.required_strength_mpa,
+        },
+    )
+    db.commit()
+    return cast
 

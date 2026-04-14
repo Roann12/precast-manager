@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Dashboard.tsx.
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +27,9 @@ import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { DashboardOverview, DashboardPlannedByTypeItem } from "../types/api";
 
+// Inputs: caller state/arguments related to dashboard.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Dashboard() {
   const { user } = useAuth();
   const [attentionDetailsOpen, setAttentionDetailsOpen] = useState(false);

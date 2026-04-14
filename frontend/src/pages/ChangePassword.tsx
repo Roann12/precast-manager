@@ -1,8 +1,12 @@
+// File overview: Page component and UI logic for pages/ChangePassword.tsx.
 import { useState } from "react";
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
+// Inputs: caller state/arguments related to change password.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function ChangePassword() {
   const { user, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");

@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/hollowcore.py.
 from __future__ import annotations
 
 from collections import defaultdict
@@ -28,17 +29,20 @@ from ..services.wetcasting_activity import log_wetcasting_activity
 router = APIRouter(prefix="/hollowcore", tags=["hollowcore"])
 
 
+# Handles  factory id or none flow.
 def _factory_id_or_none(u: User) -> int | None:
     # Super admin: factory_id is None (can read across factories).
     return int(u.factory_id) if u.factory_id is not None else None
 
 
+# Handles  require factory for write flow.
 def _require_factory_for_write(u: User) -> int:
     if u.factory_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not assigned to a factory")
     return int(u.factory_id)
 
 
+# Handles  max panels per cast flow.
 def _max_panels_per_cast(*, bed: HollowcoreBed, default_waste_mm: int, panel_length_mm: int) -> int:
     """Matches hollowcore_planner_v2: usable length = bed - margin at each end, then floor(usable / panel)."""
     if panel_length_mm <= 0:
@@ -50,12 +54,14 @@ def _max_panels_per_cast(*, bed: HollowcoreBed, default_waste_mm: int, panel_len
     return usable // int(panel_length_mm)
 
 
+# Handles  used and waste mm flow.
 def _used_and_waste_mm(*, quantity: int, panel_length_mm: int, bed_length_mm: int) -> tuple[int, int]:
     used = int(quantity) * int(panel_length_mm)
     waste = int(bed_length_mm) - used
     return used, waste
 
 
+# Handles  project allows cast on date flow.
 def _project_allows_cast_on_date(*, cast_date: date, work_saturday: bool, work_sunday: bool) -> bool:
     if is_south_africa_public_holiday(cast_date):
         return False
@@ -67,6 +73,7 @@ def _project_allows_cast_on_date(*, cast_date: date, work_saturday: bool, work_s
     return bool(work_sunday)
 
 
+# Handles  find cast at slot flow.
 def _find_cast_at_slot(
     db: Session,
     *,
@@ -97,6 +104,7 @@ class BedIn(BaseModel):
 
 
 @router.get("/beds")
+# Handles list beds flow.
 def list_beds(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["planner", "admin"])),
@@ -109,6 +117,7 @@ def list_beds(
 
 
 @router.post("/beds", status_code=201)
+# Handles create bed flow.
 def create_bed(
     body: BedIn,
     db: Session = Depends(get_db),
@@ -125,6 +134,7 @@ def create_bed(
 
 
 @router.put("/beds/{bed_id:int}")
+# Handles update bed flow.
 def update_bed(
     bed_id: int,
     body: BedIn,
@@ -145,6 +155,7 @@ def update_bed(
 
 
 @router.delete("/beds/{bed_id:int}", status_code=204)
+# Handles delete bed flow.
 def delete_bed(
     bed_id: int,
     db: Session = Depends(get_db),
@@ -170,6 +181,7 @@ class SettingsIn(BaseModel):
 
 
 @router.get("/settings")
+# Handles get settings flow.
 def get_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["planner", "admin"])),
@@ -198,6 +210,7 @@ def get_settings(
 
 
 @router.put("/settings")
+# Handles put settings flow.
 def put_settings(
     body: SettingsIn,
     db: Session = Depends(get_db),
@@ -247,6 +260,8 @@ class PlannerGenerateIn(BaseModel):
     apply_to_db: bool = True
 
 
+# Data model for planned cast in.
+# Maps object fields to storage columns/constraints.
 class PlannedCastIn(BaseModel):
     cast_date: date
     bed_id: int
@@ -260,6 +275,7 @@ class PlannedCastIn(BaseModel):
 
 
 @router.post("/planner/generate")
+# Handles planner generate flow.
 def planner_generate(
     body: PlannerGenerateIn,
     db: Session = Depends(get_db),
@@ -341,11 +357,14 @@ def planner_generate(
     return {"beds": beds, "casts": casts, "unplaced_remaining": unplaced_remaining}
 
 
+# Data model for planner commit in.
+# Maps object fields to storage columns/constraints.
 class PlannerCommitIn(BaseModel):
     casts: list[PlannedCastIn]
 
 
 @router.post("/planner/commit", status_code=201)
+# Handles planner commit flow.
 def planner_commit(
     body: PlannerCommitIn,
     db: Session = Depends(get_db),
@@ -574,6 +593,7 @@ def planner_commit(
 # Casts
 # -------------------
 @router.get("/casts")
+# Handles list casts flow.
 def list_casts(
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
@@ -594,6 +614,8 @@ def list_casts(
     return q.all()
 
 
+# Data model for cast update in.
+# Maps object fields to storage columns/constraints.
 class CastUpdateIn(BaseModel):
     cast_date: Optional[date] = None
     bed_id: Optional[int] = None
@@ -602,6 +624,7 @@ class CastUpdateIn(BaseModel):
 
 
 @router.put("/casts/{cast_id:int}")
+# Handles update cast flow.
 def update_cast(
     cast_id: int,
     body: CastUpdateIn,
@@ -620,6 +643,7 @@ def update_cast(
 
 
 @router.post("/casts/{cast_id:int}/mark-cast")
+# Handles mark cast flow.
 def mark_cast(
     cast_id: int,
     db: Session = Depends(get_db),
@@ -657,6 +681,7 @@ def mark_cast(
 
 
 @router.post("/casts/{cast_id:int}/mark-cut")
+# Handles mark cut flow.
 def mark_cut(
     cast_id: int,
     db: Session = Depends(get_db),
@@ -737,19 +762,26 @@ def mark_cut(
     return cast
 
 
+# Data model for complete in.
+# Maps object fields to storage columns/constraints.
 class CompleteIn(BaseModel):
     location_id: int
 
 
+# Data model for retest request in.
+# Maps object fields to storage columns/constraints.
 class RetestRequestIn(BaseModel):
     reason: str
 
 
+# Data model for override cut in.
+# Maps object fields to storage columns/constraints.
 class OverrideCutIn(BaseModel):
     reason: str
 
 
 @router.post("/casts/{cast_id:int}/complete")
+# Handles complete cast flow.
 def complete_cast(
     cast_id: int,
     body: CompleteIn,
@@ -812,6 +844,7 @@ def complete_cast(
 
 
 @router.post("/casts/{cast_id:int}/request-retest")
+# Handles request retest flow.
 def request_retest(
     cast_id: int,
     body: RetestRequestIn,
@@ -854,6 +887,7 @@ def request_retest(
 
 
 @router.post("/casts/{cast_id:int}/mark-cut-override")
+# Handles mark cut override flow.
 def mark_cut_override(
     cast_id: int,
     body: OverrideCutIn,

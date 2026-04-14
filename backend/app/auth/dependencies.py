@@ -1,3 +1,4 @@
+# File overview: Authentication and authorization helpers for app/auth/dependencies.py.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -11,6 +12,7 @@ from ..models.user import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
+# Handles get current user flow.
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -49,6 +51,7 @@ def get_current_user(
     return user
 
 
+# Handles require role flow.
 def require_role(allowed_roles: list[str]):
     """
     FastAPI dependency factory for role-based access control.
@@ -58,6 +61,7 @@ def require_role(allowed_roles: list[str]):
       Depends(require_role(["admin", "planner"]))
     """
 
+    # Handles  checker flow.
     def _checker(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in allowed_roles:
             raise HTTPException(
@@ -69,6 +73,7 @@ def require_role(allowed_roles: list[str]):
     return _checker
 
 
+# Handles get current factory id flow.
 def get_current_factory_id(current_user: User = Depends(get_current_user)) -> int:
     if current_user.factory_id is None:
         raise HTTPException(

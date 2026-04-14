@@ -1,3 +1,4 @@
+// File overview: Route configuration and navigation guards for routes/index.tsx.
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
@@ -27,16 +28,24 @@ const HollowcoreBeds = lazy(() => import("../pages/HollowcoreBeds"));
 const HollowcoreSettings = lazy(() => import("../pages/HollowcoreSettings"));
 const ActivityLog = lazy(() => import("../pages/ActivityLog"));
 
+// Inputs: caller state/arguments related to route fallback.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function RouteFallback() {
   return (
+    // Shared loading state shown while a lazily-loaded page bundle downloads.
     <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "40vh" }}>
       <CircularProgress />
     </Box>
   );
 }
 
+// Inputs: caller state/arguments related to app routes.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function AppRoutes() {
   return (
+    // Suspense enables route-level code splitting via React.lazy.
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />

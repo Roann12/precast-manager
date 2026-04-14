@@ -1,3 +1,4 @@
+# File overview: Application module logic for app/database.py.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
@@ -9,6 +10,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, futu
 Base = declarative_base()
 
 
+# Handles get db flow.
 def get_db():
     db = SessionLocal()
     try:

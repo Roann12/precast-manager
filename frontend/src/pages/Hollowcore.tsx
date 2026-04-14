@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Hollowcore.tsx.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -41,6 +42,9 @@ const toLocalISODate = (d: Date = new Date()) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// Inputs: caller state/arguments related to hollowcore.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Hollowcore() {
   const notify = useNotify();
   const qc = useQueryClient();

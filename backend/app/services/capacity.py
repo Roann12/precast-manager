@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/capacity.py.
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -6,6 +7,7 @@ from ..models.mould import Mould
 from ..models.planner_delay import PlannerDelay
 
 
+# Handles check mould capacity flow.
 def check_mould_capacity(db: Session, mould_id: int, factory_id: int, production_date, quantity: int):
 
     mould = db.query(Mould).filter(Mould.id == mould_id, Mould.factory_id == factory_id).first()

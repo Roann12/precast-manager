@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/project_service.py.
 from typing import List
 from datetime import datetime
 
@@ -16,6 +17,7 @@ from ..schemas.project import ProjectCreate, ProjectUpdate
 ACTIVE_PROJECT_STATUSES = ("planned", "active")
 
 
+# Handles list projects flow.
 def list_projects(
     db: Session,
     factory_id: int,
@@ -37,6 +39,7 @@ def list_projects(
     return list(db.scalars(stmt))
 
 
+# Handles create project flow.
 def create_project(db: Session, project_in: ProjectCreate, factory_id: int) -> Project:
     project = Project(**project_in.dict(), factory_id=factory_id)
     db.add(project)
@@ -45,6 +48,7 @@ def create_project(db: Session, project_in: ProjectCreate, factory_id: int) -> P
     return project
 
 
+# Handles get project flow.
 def get_project(db: Session, project_id: int, factory_id: int) -> Project:
     project = db.query(Project).filter(Project.id == project_id, Project.factory_id == factory_id).first()
     if not project:
@@ -52,6 +56,7 @@ def get_project(db: Session, project_id: int, factory_id: int) -> Project:
     return project
 
 
+# Handles update project flow.
 def update_project(db: Session, project_id: int, project_in: ProjectUpdate, factory_id: int) -> Project:
     project = get_project(db, project_id, factory_id)
     updates = project_in.dict(exclude_unset=True)
@@ -75,6 +80,7 @@ def update_project(db: Session, project_id: int, project_in: ProjectUpdate, fact
     return project
 
 
+# Handles delete project flow.
 def delete_project(db: Session, project_id: int, factory_id: int) -> None:
     _ = get_project(db, project_id, factory_id)
 

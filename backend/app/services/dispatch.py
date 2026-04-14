@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/dispatch.py.
 from sqlalchemy.orm import Session
 from datetime import date
 from datetime import datetime
@@ -14,6 +15,7 @@ from .wetcasting_activity import log_wetcasting_activity
 ALLOWED_DISPATCH_STATUSES = {"planned", "completed", "cancelled"}
 
 
+# Handles create dispatch flow.
 def create_dispatch(
     db: Session,
     project_id: int,
@@ -44,6 +46,7 @@ def create_dispatch(
     return dispatch
 
 
+# Handles add item to dispatch flow.
 def add_item_to_dispatch(
     db: Session,
     dispatch_id: int,
@@ -147,6 +150,7 @@ def add_item_to_dispatch(
     return item
 
 
+# Handles remove item from dispatch flow.
 def remove_item_from_dispatch(
     db: Session,
     dispatch_item_id: int,
@@ -182,6 +186,7 @@ def remove_item_from_dispatch(
     return {"ok": True}
 
 
+# Handles update dispatch status flow.
 def update_dispatch_status(
     db: Session,
     dispatch_id: int,

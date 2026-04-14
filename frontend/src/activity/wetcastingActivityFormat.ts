@@ -1,8 +1,15 @@
+// File overview: Activity feed formatting and transformation helpers for activity/wetcastingActivityFormat.ts.
 import type { WetcastingActivityItem } from "../types/api";
 
+// Inputs: caller state/arguments related to pretty action.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export const prettyAction = (action: string) =>
   action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+// Inputs: caller state/arguments related to pretty entity type.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export const prettyEntityType = (t: string | null | undefined) => {
   const v = (t ?? "").toLowerCase().trim();
   if (!v) return "—";
@@ -17,6 +24,7 @@ export const prettyEntityType = (t: string | null | undefined) => {
 
 const prettyFieldName = (f: string) => f.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+// Formats activity details for display.
 export function formatActivityDetails(
   it: WetcastingActivityItem,
   yardLocationNameById: Record<number, string> = {}
@@ -82,6 +90,7 @@ export function formatActivityDetails(
   }
 }
 
+// Formats activity entity label for display.
 export function formatActivityEntityLabel(it: WetcastingActivityItem): string {
   const details = it.details as Record<string, unknown> | null | undefined;
   const mark =

@@ -1,3 +1,4 @@
+// File overview: TypeScript declaration helpers for api/axios-augment.d.ts.
 import "axios";
 
 declare module "axios" {

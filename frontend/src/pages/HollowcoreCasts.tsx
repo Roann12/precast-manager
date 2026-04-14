@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/HollowcoreCasts.tsx.
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PointerEvent as ReactPointerEvent } from "react";
@@ -61,11 +62,17 @@ type ProjectRow = { id: number; project_name?: string | null; due_date?: string 
 type LocationRow = { id: number; name: string };
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+// Inputs: unknown error object and fallback message.
+// Process: tries API-specific fields first, then generic error message.
+// Output: user-safe message string for UI feedback.
 function formatError(err: unknown, fallback: string) {
   const anyErr = err as any;
   return anyErr?.response?.data?.detail || anyErr?.response?.data?.message || anyErr?.message || fallback;
 }
 
+// Inputs: caller state/arguments related to status chip color.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function statusChipColor(status: string): "default" | "warning" | "info" | "success" | "error" {
   if (status === "planned") return "default";
   if (status === "cast") return "info";
@@ -75,6 +82,9 @@ function statusChipColor(status: string): "default" | "warning" | "info" | "succ
   return "default";
 }
 
+// Inputs: caller state/arguments related to status segment bg.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function statusSegmentBg(status: string): string {
   if (status === "completed") return "#C8E6C9";
   if (status === "cut") return "#FFE0B2";
@@ -84,6 +94,9 @@ function statusSegmentBg(status: string): string {
   return "#F5F5F5";
 }
 
+// Inputs: caller state/arguments related to status segment border.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function statusSegmentBorder(status: string): string {
   if (status === "completed") return "#2E7D32";
   if (status === "cut") return "#EF6C00";
@@ -92,7 +105,11 @@ function statusSegmentBorder(status: string): string {
   return "#90A4AE";
 }
 
+// Inputs: caller state/arguments related to cast length metric mm.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function castLengthMetricMm(c: Cast): number {
+  // Visual length fallback chain: explicit used length -> panel length * qty -> heuristic.
   const used = Number(c.used_length_mm ?? 0);
   if (used > 0) return used;
   const panelLen = Number(c.panel_length_mm ?? 0);
@@ -107,6 +124,9 @@ function clampMarginPerSideMm(bedLengthMm: number, marginMm: number): number {
   return Math.min(m, Math.floor(bedLengthMm / 2));
 }
 
+// Inputs: caller state/arguments related to panel length mm for cast.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function panelLengthMmForCast(c: Cast): number {
   const pl = Number(c.panel_length_mm ?? 0);
   if (pl > 0) return pl;
@@ -115,6 +135,9 @@ function panelLengthMmForCast(c: Cast): number {
   return Math.max(1, Math.round(u / q));
 }
 
+// Inputs: caller state/arguments related to hollowcore bed layout strip.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function HollowcoreBedLayoutStrip({
   bedLengthMm,
   wasteMarginPerSideMm,
@@ -132,6 +155,7 @@ function HollowcoreBedLayoutStrip({
   const [grabbing, setGrabbing] = useState(false);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // Click-and-drag horizontal panning for dense bed strips.
     if (!scrollRef.current || e.button !== 0) return;
     drag.current = { startX: e.clientX, scrollLeft: scrollRef.current.scrollLeft };
     scrollRef.current.setPointerCapture(e.pointerId);
@@ -162,6 +186,7 @@ function HollowcoreBedLayoutStrip({
   const panels: PanelSeg[] = [];
   let cursorMm = marginMm;
   for (const c of rows) {
+    // Expand one cast row into per-panel segments so each unit is visible.
     const panelLen = panelLengthMmForCast(c);
     const qty = Math.max(1, Number(c.quantity ?? 1));
     for (let i = 0; i < qty; i += 1) {
@@ -457,6 +482,9 @@ function HollowcoreBedLayoutFallback({
   );
 }
 
+// Inputs: caller state/arguments related to hollowcore casts.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function HollowcoreCasts() {
   const { user } = useAuth();
   const isAdmin = String(user?.role ?? "").toLowerCase() === "admin";
@@ -518,6 +546,7 @@ export default function HollowcoreCasts() {
       return r.data ?? {};
     },
     enabled: batchIdsKey.length > 0,
+    // Short staleness keeps QC gate decisions responsive while operators work.
     staleTime: 30_000,
   });
 
@@ -543,6 +572,7 @@ export default function HollowcoreCasts() {
 
   const byBed: Record<number, Cast[]> = {};
   for (const c of casts) {
+    // Group once so rendering can iterate bed-by-bed.
     const key = c.bed_id ?? 0;
     byBed[key] ||= [];
     byBed[key].push(c);
@@ -643,6 +673,7 @@ export default function HollowcoreCasts() {
     try {
       setProcessing(true);
       setErr(null);
+      // Sequential API calls preserve predictable failure behavior per cast.
       for (const id of ids) {
         await api.post(`/hollowcore/casts/${id}/complete`, { location_id: locationId });
       }
@@ -805,6 +836,7 @@ export default function HollowcoreCasts() {
                         const ages = st?.ages ?? {};
                         const oneDayFailed = ages["1"] === false;
                         const ageChip = (age: "1" | "7" | "28") => {
+                          // QC age chips are the gating signal for cut authorization.
                           const v = ages[age];
                           if (v === true) return <Chip label={`${age}d PASS`} color="success" size="small" />;
                           if (v === false) return <Chip label={`${age}d FAIL`} color="error" size="small" />;

@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/wetcasting.py.
 from datetime import date, datetime, time, timezone
 from typing import Optional
 
@@ -13,6 +14,7 @@ from ..models.wetcasting_activity import WetcastingActivity
 router = APIRouter(prefix="/wetcasting", tags=["wetcasting"])
 
 
+# Handles  to utc iso z flow.
 def _to_utc_iso_z(dt: datetime) -> str:
     # DB values are stored as UTC-naive; mark as UTC explicitly for client parsing.
     if dt.tzinfo is None:
@@ -23,6 +25,7 @@ def _to_utc_iso_z(dt: datetime) -> str:
 
 
 @router.get("/activity")
+# Handles list activity flow.
 def list_activity(
     section: Optional[str] = None,
     action: Optional[str] = None,
@@ -69,6 +72,7 @@ def list_activity(
 
 
 @router.get("/activity/filters")
+# Handles list activity filters flow.
 def list_activity_filters(
     section: Optional[str] = None,
     db: Session = Depends(get_db),

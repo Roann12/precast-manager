@@ -1,3 +1,4 @@
+# File overview: Application module logic for tests/test_health.py.
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -5,6 +6,7 @@ from app.main import app
 client = TestClient(app)
 
 
+# Handles test health ok flow.
 def test_health_ok():
     response = client.get("/health")
     assert response.status_code == 200
@@ -12,6 +14,7 @@ def test_health_ok():
     assert response.headers.get("X-Request-ID")
 
 
+# Handles test root lists docs flow.
 def test_root_lists_docs():
     response = client.get("/")
     assert response.status_code == 200

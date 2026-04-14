@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/auth.py.
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -17,6 +18,8 @@ from ..rate_limit import limiter
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+# Data model for auth user out.
+# Maps object fields to storage columns/constraints.
 class AuthUserOut(BaseModel):
     id: int
     name: str
@@ -24,10 +27,14 @@ class AuthUserOut(BaseModel):
     role: str
     factory_id: int | None
     must_change_password: bool = False
+    # Data model for config.
+    # Maps object fields to storage columns/constraints.
     class Config:
         from_attributes = True
 
 
+# Data model for token response.
+# Maps object fields to storage columns/constraints.
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -36,6 +43,7 @@ class TokenResponse(BaseModel):
 
 @auth_router.post("/token", response_model=TokenResponse)
 @limiter.limit("30/minute")
+# Handles login for access token flow.
 def login_for_access_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -64,6 +72,7 @@ def login_for_access_token(
 
 
 @auth_router.get("/me", response_model=AuthUserOut)
+# Handles me flow.
 def me(current_user: User = Depends(get_current_user)):
     return AuthUserOut(
         id=current_user.id,
@@ -75,12 +84,15 @@ def me(current_user: User = Depends(get_current_user)):
     )
 
 
+# Data model for change password in.
+# Maps object fields to storage columns/constraints.
 class ChangePasswordIn(BaseModel):
     current_password: str
     new_password: str
 
 
 @auth_router.post("/change-password")
+# Handles change password flow.
 def change_password(
     body: ChangePasswordIn,
     db: Session = Depends(get_db),
@@ -99,15 +111,21 @@ def change_password(
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+# Data model for factory out.
+# Maps object fields to storage columns/constraints.
 class FactoryOut(BaseModel):
     id: int
     name: str
     is_active: bool
 
+    # Data model for config.
+    # Maps object fields to storage columns/constraints.
     class Config:
         from_attributes = True
 
 
+# Data model for create user in.
+# Maps object fields to storage columns/constraints.
 class CreateUserIn(BaseModel):
     name: str
     email: str
@@ -116,12 +134,15 @@ class CreateUserIn(BaseModel):
     factory_id: int
 
 
+# Data model for reset password out.
+# Maps object fields to storage columns/constraints.
 class ResetPasswordOut(BaseModel):
     user_id: int
     temporary_password: str
 
 
 @admin_router.get("/factories", response_model=list[FactoryOut])
+# Handles list factories for admin flow.
 def list_factories_for_admin(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["admin"])),
@@ -135,6 +156,7 @@ def list_factories_for_admin(
 
 
 @admin_router.get("/users")
+# Handles list users for admin flow.
 def list_users_for_admin(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -166,6 +188,7 @@ def list_users_for_admin(
 
 
 @admin_router.post("/users", status_code=201)
+# Handles create user for admin flow.
 def create_user_for_admin(
     body: CreateUserIn,
     db: Session = Depends(get_db),
@@ -204,6 +227,7 @@ def create_user_for_admin(
 
 
 @admin_router.post("/users/{user_id}/reset-password", response_model=ResetPasswordOut)
+# Handles reset user password flow.
 def reset_user_password(
     user_id: int,
     db: Session = Depends(get_db),
@@ -226,6 +250,8 @@ def reset_user_password(
     return ResetPasswordOut(user_id=u.id, temporary_password=temp_pw)
 
 
+# Data model for create factory onboarding in.
+# Maps object fields to storage columns/constraints.
 class CreateFactoryOnboardingIn(BaseModel):
     factory_name: str
     admin_name: str
@@ -234,6 +260,7 @@ class CreateFactoryOnboardingIn(BaseModel):
 
 
 @admin_router.post("/factories/onboard", status_code=201)
+# Handles onboard factory flow.
 def onboard_factory(
     body: CreateFactoryOnboardingIn,
     db: Session = Depends(get_db),
@@ -286,6 +313,7 @@ def onboard_factory(
 
 
 @admin_router.post("/factories/{factory_id}/suspend")
+# Handles suspend factory flow.
 def suspend_factory(
     factory_id: int,
     db: Session = Depends(get_db),
@@ -304,6 +332,7 @@ def suspend_factory(
 
 
 @admin_router.post("/factories/{factory_id}/reactivate")
+# Handles reactivate factory flow.
 def reactivate_factory(
     factory_id: int,
     db: Session = Depends(get_db),

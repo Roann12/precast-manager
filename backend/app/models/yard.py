@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/yard.py.
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for yard inventory.
+# Maps object fields to storage columns/constraints.
 class YardInventory(Base):
     __tablename__ = "yard_inventory"
 

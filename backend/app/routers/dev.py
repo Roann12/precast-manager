@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/dev.py.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,7 @@ router = APIRouter(prefix="/dev", tags=["development"])
 
 
 @router.post("/seed")
+# Handles seed database flow.
 def seed_database(
     db: Session = Depends(get_db),
     current_user=Depends(require_role(["admin"])),

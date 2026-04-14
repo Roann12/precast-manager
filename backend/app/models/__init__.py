@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/__init__.py.
 from .user import User
 from .factory import Factory
 from .project import Project

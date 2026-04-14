@@ -1,3 +1,4 @@
+# File overview: Application module logic for app/main.py.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -59,11 +60,13 @@ app.include_router(auth.admin_router)
 
 
 @app.get("/")
+# Handles root flow.
 def root():
     return {"message": "Precast Manager API", "health": "/health", "docs": "/docs"}
 
 
 @app.get("/health")
+# Handles health flow.
 def health():
     return {"status": "ok"}
 

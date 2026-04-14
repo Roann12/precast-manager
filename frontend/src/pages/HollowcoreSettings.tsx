@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/HollowcoreSettings.tsx.
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, CircularProgress, Paper, Stack, TextField, Typography } from "@mui/material";
@@ -13,6 +14,9 @@ const defaults: HollowcoreFactorySettings = {
   final_strength_mpa: 30,
 };
 
+// Inputs: caller state/arguments related to hollowcore settings.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function HollowcoreSettings() {
   const notify = useNotify();
   const qc = useQueryClient();

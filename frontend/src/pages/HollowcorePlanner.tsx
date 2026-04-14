@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/HollowcorePlanner.tsx.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -46,6 +47,9 @@ import {
 } from "./hollowcoreQuery";
 import { QC_QUEUE_KEY, fetchQcBatchStatus, qcBatchStatusKey } from "./qcQuery";
 
+// Inputs: unknown error object and fallback message.
+// Process: tries API-specific fields first, then generic error message.
+// Output: user-safe message string for UI feedback.
 function formatError(err: unknown, fallback: string) {
   const anyErr = err as any;
   return (
@@ -122,11 +126,17 @@ function maxPanelsForBed(bed: Bed | undefined, defaultWasteMm: number, panelLeng
   return Math.floor(usable / panelLengthMm);
 }
 
+// Inputs: caller state/arguments related to usable strip length mm.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function usableStripLengthMm(bedLengthMm: number, defaultWasteMm: number): number {
   const m = Math.max(0, defaultWasteMm);
   return Math.max(0, bedLengthMm - 2 * m);
 }
 
+// Inputs: caller state/arguments related to row used length mm.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function rowUsedLengthMm(r: PlannedCast): number {
   const u = Number(r.used_length_mm);
   if (Number.isFinite(u) && u > 0) return u;
@@ -138,6 +148,7 @@ function rowUsedLengthMm(r: PlannedCast): number {
  * the last slot gets physical bed free — same value as the visualization "Free" segment.
  */
 function recomputeWasteMmForCasts(casts: PlannedCast[], bedById: Map<number, Bed>, defaultWasteMm: number): PlannedCast[] {
+  // Recompute derived waste after every manual edit so UI stays physically consistent.
   const groups = new Map<string, PlannedCast[]>();
   for (const c of casts) {
     const k = `${c.cast_date}::${c.bed_id}`;
@@ -172,6 +183,9 @@ function recomputeWasteMmForCasts(casts: PlannedCast[], bedById: Map<number, Bed
   });
 }
 
+// Inputs: caller state/arguments related to delay capacity for bed day.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function delayCapacityForBedDay(baseCapacity: number, bedId: number, date: string, delays: DelayEvent[]): number {
   const totalLost = delays
     .filter((d) => d.date === date && (d.bed_id == null || Number(d.bed_id) === Number(bedId)))
@@ -179,10 +193,16 @@ function delayCapacityForBedDay(baseCapacity: number, bedId: number, date: strin
   return Math.max(0, baseCapacity - totalLost);
 }
 
+// Inputs: caller state/arguments related to normalize slots.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function normalizeSlots(rows: PlannedCast[]): PlannedCast[] {
   return rows.map((r, idx) => ({ ...r, cast_slot_index: idx + 1 }));
 }
 
+// Inputs: caller state/arguments related to apply delays to draft.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function applyDelaysToDraft(casts: PlannedCast[], beds: Bed[], delays: DelayEvent[]): { nextCasts: PlannedCast[]; overflowWarnings: string[] } {
   if (delays.length === 0) return { nextCasts: casts, overflowWarnings: [] };
   const bedById = new Map(beds.map((b) => [Number(b.id), b] as const));
@@ -227,6 +247,7 @@ function applyDelaysToDraft(casts: PlannedCast[], beds: Bed[], delays: DelayEven
       const cap = delayCapacityForBedDay(baseCap, bedId, date, delays);
       const locked = [...(lockedByDate.get(date) ?? [])];
       const incoming = plannedByDate.get(date) ?? [];
+      // Planned rows get pushed into a queue and re-slotted based on reduced capacity.
       for (const p of incoming) queue.push(p);
 
       if (locked.length > cap) {
@@ -278,6 +299,9 @@ function projectedQtyForElement(elementId: number, draftCasts: PlannedCast[], db
   return base + delta;
 }
 
+// Inputs: caller state/arguments related to map server casts to planned.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function mapServerCastsToPlanned(raw: unknown[], bedListForMap: Bed[], defaultWaste: number): PlannedCast[] {
   const bedMap = new Map(bedListForMap.map((b) => [b.id, b] as const));
   const mapped: PlannedCast[] = (raw ?? []).map((row) => {
@@ -309,6 +333,9 @@ function mapServerCastsToPlanned(raw: unknown[], bedListForMap: Bed[], defaultWa
 
 type GenPayload = { start: string; end: string; waste: number };
 
+// Inputs: caller state/arguments related to hollowcore planner.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function HollowcorePlanner() {
   const { user } = useAuth();
   const isAdmin = String(user?.role ?? "").toLowerCase() === "admin";
@@ -426,6 +453,7 @@ export default function HollowcorePlanner() {
       setGeneratedBeds(bedList);
       const bedMap = new Map(bedList.map((b) => [b.id, b] as const));
       const mapped = (data?.casts ?? []).map((c) => {
+        // Generated draft rows start with baselineQty=0 because nothing is committed yet.
         const castDate = typeof c.cast_date === "string" ? c.cast_date : String(c.cast_date).slice(0, 10);
         const qty = Number(c.quantity ?? 0);
         const panelLen = Number(c.panel_length_mm ?? 0);
@@ -452,6 +480,7 @@ export default function HollowcorePlanner() {
   });
 
   useEffect(() => {
+    // Auto mode regenerates draft on range/settings changes; manual mode does not.
     if (!autoGenerate || !settingsQuery.isFetched || !bedsQuery.isFetched) return;
     generateMutation.mutate({ start, end, waste: defaultWasteMm });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when range / mode / waste / beds changes
@@ -517,6 +546,7 @@ export default function HollowcorePlanner() {
         qClient.invalidateQueries({ queryKey: HOLLOWCORE_ELEMENTS_HC_KEY }),
         qClient.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
       ]);
+      // Re-fetch authoritative DB data so planner reflects committed truth, not local draft.
       const raw = await qClient.fetchQuery({
         queryKey: hollowcoreCastsRangeKey(res.start, res.end),
         queryFn: () => fetchHollowcoreCastsRange(res.start, res.end),
@@ -638,6 +668,7 @@ export default function HollowcorePlanner() {
       const el = elementMap.get(Number(c.element_id));
       const mark = String(el?.element_mark ?? "").toLowerCase();
       const pid = String(el?.project_id ?? "");
+      // Search supports mark, project id, or raw element id for shop-floor workflows.
       return mark.includes(needle) || pid.includes(needle) || String(c.element_id).includes(needle);
     });
   }, [casts, bedFilterRaw, statusFilter, lateOnly, searchTerm, elementMap, projectMap]);
@@ -812,6 +843,7 @@ export default function HollowcorePlanner() {
       const maxEl = Math.max(0, orderQty - projected + row.quantity);
 
       const upper = Math.min(maxBed, maxEl);
+      // Quantity cannot exceed bed physical capacity or remaining order demand.
       if (upper < 1) {
         return prev;
       }

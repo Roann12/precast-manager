@@ -1,3 +1,4 @@
+// File overview: API client behavior and request/response handling for api/client.ts.
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { notifyUnauthorized } from "./unauthorized";
 
@@ -8,7 +9,11 @@ const api = axios.create({
   },
 });
 
+// Inputs: caller state/arguments related to is password grant token request.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function isPasswordGrantTokenRequest(config: InternalAxiosRequestConfig): boolean {
+  // Login failures should stay on the login page, not trigger global 401 redirect handling.
   const method = (config.method ?? "get").toLowerCase();
   if (method !== "post") return false;
   const path = (config.url ?? "").split("?")[0].replace(/\/+$/, "") || "";
@@ -16,6 +21,7 @@ function isPasswordGrantTokenRequest(config: InternalAxiosRequestConfig): boolea
 }
 
 api.interceptors.request.use((config) => {
+  // Attach JWT on every request once user has signed in.
   const token = localStorage.getItem("access_token");
   if (token) {
     config.headers = config.headers ?? {};
@@ -35,6 +41,7 @@ api.interceptors.response.use(
       !cfg.skipUnauthorizedRedirect &&
       !isPasswordGrantTokenRequest(cfg)
     ) {
+      // Bubble a session-expired event to AuthContext for centralized logout + redirect UX.
       let msg: string | undefined;
       if (axios.isAxiosError(error)) {
         const d = error.response?.data;

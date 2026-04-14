@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Projects.tsx.
 import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +29,9 @@ import { useNotify } from "../notifications/NotifyContext";
 
 const PROJECTS_LIST_ROOT_KEY = ["projects", "list"] as const;
 
+// Inputs: caller state/arguments related to projects.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Projects() {
   const notify = useNotify();
   const qc = useQueryClient();

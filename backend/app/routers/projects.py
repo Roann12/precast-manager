@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/projects.py.
 from typing import List
 
 from fastapi import APIRouter, Depends, Query
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.get("", response_model=List[Project])
+# Handles list projects flow.
 def list_projects(
     search: str | None = Query(default=None),
     status: str | None = Query(default=None),
@@ -31,6 +33,7 @@ def list_projects(
 
 
 @router.post("", response_model=Project, status_code=201)
+# Handles create project flow.
 def create_project(
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
@@ -41,12 +44,14 @@ def create_project(
 
 
 @router.get("/{project_id}", response_model=Project)
+# Handles get project flow.
 def get_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     factory_id = get_current_factory_id(current_user)
     return project_service.get_project(db, project_id, factory_id)
 
 
 @router.put("/{project_id}", response_model=Project)
+# Handles update project flow.
 def update_project(
     project_id: int,
     project_in: ProjectUpdate,
@@ -58,6 +63,7 @@ def update_project(
 
 
 @router.delete("/{project_id}", status_code=204)
+# Handles delete project flow.
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),

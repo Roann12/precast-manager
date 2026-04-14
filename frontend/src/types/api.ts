@@ -1,3 +1,4 @@
+// File overview: Shared TypeScript types for API and frontend models in types/api.ts.
 // Backend-aligned API types (FastAPI + SQLAlchemy models)
 
 export type ISODateString = string; // YYYY-MM-DD

@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Login.tsx.
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Visibility from "@mui/icons-material/Visibility";
@@ -8,6 +9,9 @@ import precastLogo from "../assets/precast-logo.png";
 
 type LoginLocationState = { sessionMessage?: string };
 
+// Inputs: caller state/arguments related to login.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Login() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
@@ -20,9 +24,11 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // If user was redirected here after token expiry, surface that message once.
     const msg = (location.state as LoginLocationState | null)?.sessionMessage;
     if (!msg?.trim()) return;
     setError(msg);
+    // Clear route state so refresh/navigation does not keep replaying the same alert.
     navigate(location.pathname + location.search, { replace: true, state: {} });
   }, [location.pathname, location.search, location.state, navigate]);
 

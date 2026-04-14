@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/dispatch.py.
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for dispatch order.
+# Maps object fields to storage columns/constraints.
 class DispatchOrder(Base):
     __tablename__ = "dispatch_orders"
 

@@ -1,3 +1,4 @@
+// File overview: Reusable UI component logic for components/Layout/MainLayout.tsx.
 import { ReactNode, useMemo, useState } from "react";
 import { AppBar, Box, Button, Container, IconButton, Toolbar, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -11,6 +12,9 @@ interface Props {
   children: ReactNode;
 }
 
+// Inputs: caller state/arguments related to main layout.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function MainLayout({ children }: Props) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const location = useLocation();

@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/seed.py.
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
@@ -13,6 +14,7 @@ from ..models.production import ProductionSchedule
 from ..models.hollowcore_cast import HollowcoreCast
 
 
+# Handles seed demo data flow.
 def seed_demo_data(db: Session):
     """
     Seed some demo data so dashboard/Hollowcore/QC screens have something to show.

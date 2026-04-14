@@ -1,3 +1,4 @@
+// File overview: Reusable UI component logic for components/WetcastingActivityFeed.tsx.
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import {
@@ -29,6 +30,9 @@ type Props = {
   section: "elements" | "planner" | "production";
 };
 
+// Inputs: caller state/arguments related to wetcasting activity feed.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function WetcastingActivityFeed({ section }: Props) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<WetcastingActivityItem[]>([]);

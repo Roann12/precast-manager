@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/hollowcoreQuery.ts.
 import api from "../api/client";
 import type { Element, HollowcoreCast } from "../types/api";
 
@@ -11,13 +12,19 @@ export type HollowcoreFactorySettings = {
 
 export const HOLLOWCORE_SETTINGS_KEY = ["hollowcore", "settings"] as const;
 
+// Fetches data for hollowcore settings from the API.
 export async function fetchHollowcoreSettings(): Promise<HollowcoreFactorySettings> {
   return (await api.get<HollowcoreFactorySettings>("/hollowcore/settings")).data;
 }
 
+// Inputs: caller state/arguments related to hollowcore casts range key.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export const hollowcoreCastsRangeKey = (fromDate: string, toDate: string) =>
+  // Include date range in key so each planner window caches independently.
   ["hollowcore", "casts", "range", fromDate, toDate] as const;
 
+// Fetches data for hollowcore casts range from the API.
 export async function fetchHollowcoreCastsRange(fromDate: string, toDate: string): Promise<HollowcoreCast[]> {
   const { data } = await api.get<HollowcoreCast[]>("/hollowcore/casts", {
     params: { from_date: fromDate, to_date: toDate },
@@ -28,6 +35,7 @@ export async function fetchHollowcoreCastsRange(fromDate: string, toDate: string
 /** Unfiltered casts list (used for hollowcore element staging summaries). */
 export const HOLLOWCORE_CASTS_REGISTRY_KEY = ["hollowcore", "casts", "registry"] as const;
 
+// Fetches data for hollowcore casts registry from the API.
 export async function fetchHollowcoreCastsRegistry(): Promise<
   Array<{ element_id?: number; quantity?: number; status?: string }>
 > {
@@ -39,6 +47,7 @@ export async function fetchHollowcoreCastsRegistry(): Promise<
 
 export const HOLLOWCORE_ELEMENTS_HC_KEY = ["elements", "hollowcore-only"] as const;
 
+// Fetches data for hollowcore elements list from the API.
 export async function fetchHollowcoreElementsList(): Promise<Element[]> {
   const { data } = await api.get<Element[]>("/elements/", { params: { hollowcore_only: true } });
   return data ?? [];
@@ -54,13 +63,19 @@ export type HollowcoreBedRow = {
   active: boolean;
 };
 
+// Fetches data for hollowcore beds from the API.
 export async function fetchHollowcoreBeds(): Promise<HollowcoreBedRow[]> {
   return (await api.get<HollowcoreBedRow[]>("/hollowcore/beds")).data ?? [];
 }
 
+// Inputs: caller state/arguments related to hollowcore casts day key.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export const hollowcoreCastsDayKey = (day: string, statusFilter: string) =>
+  // Status is part of the key to avoid mixing filtered and unfiltered day results.
   ["hollowcore", "casts", "day", day, statusFilter || "__all__"] as const;
 
+// Fetches data for hollowcore casts for day from the API.
 export async function fetchHollowcoreCastsForDay(day: string, statusFilter: string) {
   const { data } = await api.get<HollowcoreCast[]>("/hollowcore/casts", {
     params: {
@@ -81,9 +96,13 @@ export type HollowcorePlannerDelay = {
   reason: string;
 };
 
+// Inputs: caller state/arguments related to hollowcore planner delays key.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export const hollowcorePlannerDelaysKey = (from: string, to: string) =>
   ["planner", "delays", "hollowcore", from, to] as const;
 
+// Fetches data for hollowcore planner delays from the API.
 export async function fetchHollowcorePlannerDelays(
   from: string,
   to: string
@@ -100,6 +119,7 @@ export async function fetchHollowcorePlannerDelays(
     params: { planner_type: "hollowcore", from_date: from, to_date: to },
   });
   return (data ?? []).map((d) => ({
+    // Normalize backend field names/types to planner-friendly shape.
     id: Number(d.id),
     date: String(d.delay_date).slice(0, 10),
     bed_id: d.bed_id == null ? null : Number(d.bed_id),

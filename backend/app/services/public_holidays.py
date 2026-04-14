@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/public_holidays.py.
 from __future__ import annotations
 
 from datetime import date
@@ -7,6 +8,7 @@ import holidays
 
 
 @lru_cache(maxsize=8)
+# Handles  za holidays for year flow.
 def _za_holidays_for_year(year: int):
     """
     Returns a mapping-like object of South Africa public holidays for the given year.
@@ -23,6 +25,7 @@ def _za_holidays_for_year(year: int):
     return holidays.country_holidays("ZA", years=[year])
 
 
+# Handles is south africa public holiday flow.
 def is_south_africa_public_holiday(d: date) -> bool:
     """True when `d` is a South Africa public holiday (includes observed/substitute days)."""
     return d in _za_holidays_for_year(d.year)

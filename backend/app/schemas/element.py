@@ -1,8 +1,11 @@
+# File overview: Pydantic schemas for validation/serialization in app/schemas/element.py.
 from datetime import date
 from pydantic import BaseModel
 from typing import Optional, List
 
 
+# Data model for element base.
+# Maps object fields to storage columns/constraints.
 class ElementBase(BaseModel):
     project_id: int
     mix_design_id: Optional[int] = None
@@ -20,10 +23,14 @@ class ElementBase(BaseModel):
     status: Optional[str] = "planned"
 
 
+# Data model for element create.
+# Maps object fields to storage columns/constraints.
 class ElementCreate(ElementBase):
     allowed_mould_ids: List[int] = []
 
 
+# Data model for element update.
+# Maps object fields to storage columns/constraints.
 class ElementUpdate(BaseModel):
     mix_design_id: Optional[int] = None
     element_type: Optional[str] = None
@@ -40,9 +47,13 @@ class ElementUpdate(BaseModel):
     allowed_mould_ids: Optional[List[int]] = None
 
 
+# Data model for element.
+# Maps object fields to storage columns/constraints.
 class Element(ElementBase):
     id: int
     allowed_mould_ids: List[int] = []
 
+    # Data model for config.
+    # Maps object fields to storage columns/constraints.
     class Config:
         from_attributes = True

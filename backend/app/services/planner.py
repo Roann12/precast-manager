@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/planner.py.
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 import uuid
@@ -11,6 +12,7 @@ from .capacity import check_mould_capacity
 from sqlalchemy import or_
 ACTIVE_PROJECT_STATUSES = ("planned", "active")
 
+# Handles  is working day flow.
 def _is_working_day(d: date, work_saturday: bool, work_sunday: bool) -> bool:
     # South Africa public holidays are treated as non-working days by default.
     if is_south_africa_public_holiday(d):
@@ -23,6 +25,7 @@ def _is_working_day(d: date, work_saturday: bool, work_sunday: bool) -> bool:
     return True
 
 
+# Handles  next working day flow.
 def _next_working_day(d: date, work_saturday: bool, work_sunday: bool) -> date:
     cur = d
     while not _is_working_day(cur, work_saturday, work_sunday):
@@ -30,6 +33,7 @@ def _next_working_day(d: date, work_saturday: bool, work_sunday: bool) -> date:
     return cur
 
 
+# Handles generate production plan flow.
 def generate_production_plan(db: Session, factory_id: int):
     # First clear all non-completed non-hollowcore schedules in this factory.
     # This removes stale planned rows from suspended/cancelled/completed projects

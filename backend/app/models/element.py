@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/element.py.
 from datetime import date
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric, Index, Boolean
 from sqlalchemy.orm import relationship
@@ -5,6 +6,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for element.
+# Maps object fields to storage columns/constraints.
 class Element(Base):
     __tablename__ = "elements"
 
@@ -59,6 +62,7 @@ class Element(Base):
     )
 
     @property
+    # Handles allowed mould ids flow.
     def allowed_mould_ids(self):
         # Used by Pydantic response models to expose compatibility mapping.
         return [em.mould_id for em in (self.element_moulds or [])]

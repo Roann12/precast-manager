@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/hollowcore_settings.py.
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, Integer, DateTime, ForeignKey
@@ -5,6 +6,8 @@ from sqlalchemy import Boolean, Column, Integer, DateTime, ForeignKey
 from ..database import Base
 
 
+# Data model for hollowcore settings.
+# Maps object fields to storage columns/constraints.
 class HollowcoreSettings(Base):
     __tablename__ = "hollowcore_settings"
 

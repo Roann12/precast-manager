@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/wetcasting_activity.py.
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -5,6 +6,7 @@ from sqlalchemy.orm import Session
 from ..models.wetcasting_activity import WetcastingActivity
 
 
+# Handles log wetcasting activity flow.
 def log_wetcasting_activity(
     db: Session,
     *,

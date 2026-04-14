@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Users.tsx.
 import { useEffect, useMemo, useState } from "react";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import {
@@ -36,6 +37,9 @@ type FactoryOut = { id: number; name: string };
 
 const roleOptions = ["admin", "planner", "production", "yard", "dispatch", "viewer", "QC"];
 
+// Inputs: caller state/arguments related to users.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Users() {
   const notify = useNotify();
   const { user: currentUser } = useAuth();

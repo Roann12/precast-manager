@@ -1,9 +1,11 @@
+# File overview: Business logic services for app/services/yard.py.
 from sqlalchemy.orm import Session
 
 from ..models.production import ProductionSchedule
 from ..models.yard import YardInventory
 
 
+# Handles move to yard flow.
 def move_to_yard(db: Session, schedule_id: int, location: str):
 
     schedule = db.query(ProductionSchedule).filter(

@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/ActivityLog.tsx.
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -34,7 +35,11 @@ const SECTION_OPTIONS = [
   { value: "yard", label: "Yard" },
 ] as const;
 
+// Inputs: caller state/arguments related to activity log.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function ActivityLog() {
+  // UI filter state; each value is reflected directly in query params below.
   const [userId, setUserId] = useState<number | "">("");
   const [action, setAction] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
@@ -49,6 +54,7 @@ export default function ActivityLog() {
   });
 
   const yardLocationNameById = useMemo(() => {
+    // Build a fast lookup used by the "Details" formatter for yard move entries.
     const map: Record<number, string> = {};
     for (const loc of locationsQuery.data ?? []) {
       map[Number(loc.id)] = String(loc.name ?? "");
@@ -174,6 +180,7 @@ export default function ActivityLog() {
           size="small"
           variant="outlined"
           onClick={() => {
+            // Keep section + row limit intact; reset only ad-hoc filters.
             setUserId("");
             setAction("");
             setFromDate("");
@@ -185,6 +192,7 @@ export default function ActivityLog() {
       </Stack>
 
       {itemsQuery.isPending || filtersQuery.isPending ? (
+        // Wait until both "available filters" and "matching rows" are ready.
         <Stack alignItems="center" sx={{ py: 4 }}>
           <CircularProgress size={32} />
         </Stack>

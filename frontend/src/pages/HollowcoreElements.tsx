@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/HollowcoreElements.tsx.
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -26,6 +27,9 @@ import {
   fetchHollowcoreElementsList,
 } from "./hollowcoreQuery";
 
+// Inputs: unknown error object and fallback message.
+// Process: tries API-specific fields first, then generic error message.
+// Output: user-safe message string for UI feedback.
 function formatError(err: unknown, fallback: string) {
   const anyErr = err as any;
   return (
@@ -36,6 +40,9 @@ function formatError(err: unknown, fallback: string) {
   );
 }
 
+// Inputs: caller state/arguments related to hollowcore elements.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function HollowcoreElements() {
   const qc = useQueryClient();
 
@@ -59,6 +66,7 @@ export default function HollowcoreElements() {
   const projects = projectsQuery.data ?? [];
 
   const invalidateHc = () =>
+    // Keep all dependent screens in sync after any hollowcore element change.
     Promise.all([
       qc.invalidateQueries({ queryKey: HOLLOWCORE_ELEMENTS_HC_KEY }),
       qc.invalidateQueries({ queryKey: HOLLOWCORE_CASTS_REGISTRY_KEY }),
@@ -89,6 +97,7 @@ export default function HollowcoreElements() {
   });
 
   const autoStageByElementId = useMemo(() => {
+    // Derive a read-only "progress stage" from cast registry status totals.
     const data = castsRegistryQuery.data ?? [];
     const byElement: Record<number, { planned: number; cast: number; completed: number }> = {};
     for (const row of data) {
@@ -110,6 +119,7 @@ export default function HollowcoreElements() {
       }
       const targetQty = Number(el.quantity ?? 0);
       if (row.completed >= targetQty && targetQty > 0) next[el.id] = "completed";
+      // Any cast/completed quantity means production has started.
       else if (row.cast + row.completed > 0) next[el.id] = "cast";
       else next[el.id] = "planned";
     }
@@ -117,6 +127,7 @@ export default function HollowcoreElements() {
   }, [items, castsRegistryQuery.data]);
 
   const totals = useMemo(() => {
+    // KPI chips are based on completed units vs ordered quantity per element.
     const completedByElementId: Record<number, number> = {};
     for (const row of castsRegistryQuery.data ?? []) {
       const elementId = Number(row.element_id);
@@ -147,6 +158,7 @@ export default function HollowcoreElements() {
         name === "panel_length_mm" ||
         name === "slab_thickness_mm"
       ) {
+        // Numeric fields are normalized to numbers for backend payload consistency.
         return { ...f, [name]: value === "" ? 0 : Number(value) };
       }
       if (name === "due_date") return { ...f, due_date: value === "" ? null : value };
@@ -172,6 +184,7 @@ export default function HollowcoreElements() {
   };
 
   const startEdit = (el: Element) => {
+    // Prefill only editable fields; immutable fields stay as-is.
     setEditingId(el.id);
     setEditForm({
       element_mark: el.element_mark,
@@ -234,6 +247,7 @@ export default function HollowcoreElements() {
     setLoading(true);
     setErr(null);
     try {
+      // Archive keeps history but hides row from active planning flows.
       await api.post(`/elements/${id}/archive`);
       await invalidateHc();
     } catch (e) {

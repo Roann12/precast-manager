@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/quality.py.
 from datetime import date
 from sqlalchemy import Column, Integer, String, Date, Text, ForeignKey, Index, Float, Boolean
 from sqlalchemy.orm import relationship
@@ -5,6 +6,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for quality test.
+# Maps object fields to storage columns/constraints.
 class QualityTest(Base):
     __tablename__ = "quality_tests"
 

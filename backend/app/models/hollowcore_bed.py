@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/hollowcore_bed.py.
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Index
@@ -5,6 +6,8 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, I
 from ..database import Base
 
 
+# Data model for hollowcore bed.
+# Maps object fields to storage columns/constraints.
 class HollowcoreBed(Base):
     __tablename__ = "hollowcore_beds"
 

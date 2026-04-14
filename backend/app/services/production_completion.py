@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/production_completion.py.
 from sqlalchemy.orm import Session
 
 from ..models.production import ProductionSchedule
@@ -5,6 +6,7 @@ from ..models.yard import YardInventory
 from ..models.yard_location import YardLocation
 
 
+# Handles complete production flow.
 def complete_production(db: Session, schedule_id: int, location_id: int, factory_id: int):
 
     # Find production schedule

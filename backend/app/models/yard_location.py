@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/yard_location.py.
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for yard location.
+# Maps object fields to storage columns/constraints.
 class YardLocation(Base):
     __tablename__ = "yard_locations"
 

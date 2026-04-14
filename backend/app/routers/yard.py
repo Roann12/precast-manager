@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/yard.py.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/yard", tags=["yard"])
 
 # CREATE YARD LOCATION
 @router.post("/locations")
+# Handles create location flow.
 def create_location(
     name: str,
     description: str = "",
@@ -37,12 +39,14 @@ def create_location(
 
 # LIST YARD LOCATIONS
 @router.get("/locations")
+# Handles list locations flow.
 def list_locations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     factory_id = get_current_factory_id(current_user)
     return db.query(YardLocation).filter(YardLocation.factory_id == factory_id).all()
 
 
 @router.put("/locations/{location_id}")
+# Handles update location flow.
 def update_location(
     location_id: int,
     name: str | None = None,
@@ -66,6 +70,7 @@ def update_location(
 
 
 @router.delete("/locations/{location_id}", status_code=204)
+# Handles delete location flow.
 def delete_location(
     location_id: int,
     db: Session = Depends(get_db),
@@ -99,6 +104,7 @@ def delete_location(
 
 # VIEW YARD INVENTORY
 @router.get("/inventory")
+# Handles yard inventory flow.
 def yard_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["yard", "dispatch", "admin"])),
@@ -142,6 +148,7 @@ def yard_inventory(
 
 
 @router.post("/move")
+# Handles move inventory flow.
 def move_inventory(
     yard_inventory_id: int,
     to_location_id: int,

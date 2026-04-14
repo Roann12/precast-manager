@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/MixDesigns.tsx.
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -18,6 +19,9 @@ import api from "../api/client";
 
 import type { MixDesign, MixDesignCreate, MixDesignUpdate } from "../types/api";
 
+// Inputs: caller state/arguments related to mix designs.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function MixDesigns() {
   const [items, setItems] = useState<MixDesign[]>([]);
   const [form, setForm] = useState<MixDesignCreate>({ name: "", target_strength_mpa: null, active: true });

@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/elements.py.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -21,6 +22,7 @@ ACTIVE_PROJECT_STATUSES = ("planned", "active")
 
 
 @router.post("/", response_model=Element)
+# Handles create element flow.
 def create_element(
     element: ElementCreate,
     db: Session = Depends(get_db),
@@ -78,6 +80,7 @@ def create_element(
 
 
 @router.get("/", response_model=List[Element])
+# Handles list elements flow.
 def list_elements(
     hollowcore_only: Optional[bool] = None,
     include_inactive: Optional[bool] = False,
@@ -108,6 +111,7 @@ def list_elements(
 
 
 @router.get("/progress")
+# Handles list element progress flow.
 def list_element_progress(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -156,6 +160,7 @@ def list_element_progress(
 
 
 @router.get("/{element_id}", response_model=Element)
+# Handles get element flow.
 def get_element(
     element_id: int,
     db: Session = Depends(get_db),
@@ -169,6 +174,7 @@ def get_element(
 
 
 @router.put("/{element_id}", response_model=Element)
+# Handles update element flow.
 def update_element(
     element_id: int,
     update: ElementUpdate,
@@ -216,6 +222,7 @@ def update_element(
 
 
 @router.post("/{element_id}/archive", response_model=Element)
+# Handles archive element flow.
 def archive_element(
     element_id: int,
     db: Session = Depends(get_db),
@@ -243,6 +250,7 @@ def archive_element(
 
 
 @router.post("/{element_id}/unarchive", response_model=Element)
+# Handles unarchive element flow.
 def unarchive_element(
     element_id: int,
     db: Session = Depends(get_db),
@@ -270,6 +278,7 @@ def unarchive_element(
 
 
 @router.delete("/{element_id}")
+# Handles delete element flow.
 def delete_element(
     element_id: int,
     db: Session = Depends(get_db),

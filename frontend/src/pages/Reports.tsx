@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Reports.tsx.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -36,6 +37,9 @@ const toLocalISODate = (d: Date = new Date()) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// Inputs: caller state/arguments related to export rows to excel.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function exportRowsToExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
   if (!rows.length) return;
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -99,6 +103,9 @@ type QcProjectResultRow = {
   result: string;
 };
 
+// Inputs: caller state/arguments related to view table.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function ViewTable({
   columns,
   rows,
@@ -180,6 +187,9 @@ function ViewTable({
   );
 }
 
+// Inputs: caller state/arguments related to reports.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Reports() {
   const { user } = useAuth();
 

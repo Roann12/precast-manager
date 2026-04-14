@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/hollowcore_completion.py.
 from sqlalchemy.orm import Session
 
 from ..models.hollowcore_cast import HollowcoreCast
@@ -5,6 +6,7 @@ from ..models.yard import YardInventory
 from ..models.element import Element
 
 
+# Handles complete hollowcore cast flow.
 def complete_hollowcore_cast(db: Session, cast_id: int, location_id: int, factory_id: int):
     cast = (
         db.query(HollowcoreCast)

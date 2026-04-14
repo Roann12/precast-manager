@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Yard.tsx.
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +30,9 @@ import type { YardInventoryRow } from "../types/api";
 import { YARD_INVENTORY_KEY, YARD_LOCATIONS_KEY, fetchYardInventory, fetchYardLocations } from "./yardQuery";
 import { useNotify } from "../notifications/NotifyContext";
 
+// Inputs: caller state/arguments related to yard.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Yard() {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down("md"));

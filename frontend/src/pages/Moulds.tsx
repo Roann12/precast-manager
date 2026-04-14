@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Moulds.tsx.
 import { useEffect, useState } from "react";
 import {
   Paper,
@@ -20,6 +21,9 @@ import type { Mould, MouldCreate, MouldUpdate } from "../types/api";
 import { MOULD_TYPES } from "../constants/options";
 import { useNotify } from "../notifications/NotifyContext";
 
+// Inputs: caller state/arguments related to moulds.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Moulds() {
   const notify = useNotify();
   const [moulds, setMoulds] = useState<Mould[]>([]);

@@ -1,3 +1,4 @@
+// File overview: Reusable UI component logic for components/ErrorBoundary.tsx.
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { Box, Button, Typography } from "@mui/material";
 

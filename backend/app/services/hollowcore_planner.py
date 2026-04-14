@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/hollowcore_planner.py.
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -13,6 +14,7 @@ from ..models.hollowcore_cast import HollowcoreCast
 from .public_holidays import is_south_africa_public_holiday
 
 
+# Handles  is working day flow.
 def _is_working_day(d: date, work_saturday: bool, work_sunday: bool) -> bool:
     # South Africa public holidays are treated as non-working days by default.
     if is_south_africa_public_holiday(d):
@@ -25,6 +27,7 @@ def _is_working_day(d: date, work_saturday: bool, work_sunday: bool) -> bool:
     return True
 
 
+# Handles  next working day flow.
 def _next_working_day(d: date, work_saturday: bool, work_sunday: bool) -> date:
     cur = d
     while not _is_working_day(cur, work_saturday, work_sunday):
@@ -32,6 +35,7 @@ def _next_working_day(d: date, work_saturday: bool, work_sunday: bool) -> date:
     return cur
 
 
+# Handles  get casts per panel cast flow.
 def _get_casts_per_panel_cast(bed_length_mm: int, waste_margin_mm: int, panel_length_mm: int) -> int:
     # How many panels fit onto a bed cast, accounting for trim/waste.
     # The planner assumes the cast is entirely dedicated to one panel length per slot.
@@ -41,6 +45,7 @@ def _get_casts_per_panel_cast(bed_length_mm: int, waste_margin_mm: int, panel_le
     return usable // panel_length_mm
 
 
+# Handles generate hollowcore plan flow.
 def generate_hollowcore_plan(db: Session, factory_id: int):
     # Use per-factory settings; if not found, fall back to global defaults (factory_id IS NULL).
     settings = (

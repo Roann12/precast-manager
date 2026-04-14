@@ -1,3 +1,4 @@
+# File overview: Application module logic for tests/test_dashboard_qc.py.
 """
 Dashboard QC metrics and /qc/queue alignment.
 
@@ -31,6 +32,7 @@ FIXED_TODAY = date(2026, 4, 17)
 
 
 @pytest.fixture
+# Handles qc api client flow.
 def qc_api_client():
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
@@ -41,6 +43,7 @@ def qc_api_client():
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
     db = SessionLocal()
 
+    # Handles override get db flow.
     def override_get_db():
         try:
             yield db
@@ -67,6 +70,7 @@ def qc_api_client():
     engine.dispose()
 
 
+# Handles  seed minimal factory flow.
 def _seed_minimal_factory(db, *, production_date: date, batch_id: str = "BATCH-QC-1") -> None:
     db.add(Factory(id=FACTORY_ID, name="pytest-factory", is_active=True))
     db.add(
@@ -125,6 +129,7 @@ def _seed_minimal_factory(db, *, production_date: date, batch_id: str = "BATCH-Q
 
 @patch("app.routers.dashboard.date")
 @patch("app.services.qc_lab_queue.date")
+# Handles test dashboard overview includes qc fields and zeros flow.
 def test_dashboard_overview_includes_qc_fields_and_zeros(
     mock_qc_date, mock_dash_date, qc_api_client
 ):
@@ -153,6 +158,7 @@ def test_dashboard_overview_includes_qc_fields_and_zeros(
 
 @patch("app.routers.dashboard.date")
 @patch("app.services.qc_lab_queue.date")
+# Handles test qc queue counts match dashboard overview flow.
 def test_qc_queue_counts_match_dashboard_overview(mock_qc_date, mock_dash_date, qc_api_client):
     mock_qc_date.today.return_value = FIXED_TODAY
     mock_dash_date.today.return_value = FIXED_TODAY
@@ -174,6 +180,7 @@ def test_qc_queue_counts_match_dashboard_overview(mock_qc_date, mock_dash_date, 
 
 
 @patch("app.services.qc_lab_queue.date")
+# Handles test build qc lab queue overdue when 7d missing flow.
 def test_build_qc_lab_queue_overdue_when_7d_missing(mock_qc_date, qc_api_client):
     mock_qc_date.today.return_value = FIXED_TODAY
     _, db = qc_api_client
@@ -188,6 +195,7 @@ def test_build_qc_lab_queue_overdue_when_7d_missing(mock_qc_date, qc_api_client)
 
 @patch("app.routers.dashboard.date")
 @patch("app.services.qc_lab_queue.date")
+# Handles test qc manual results pending counts pass null past test date flow.
 def test_qc_manual_results_pending_counts_pass_null_past_test_date(
     mock_qc_date, mock_dash_date, qc_api_client
 ):

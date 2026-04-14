@@ -1,3 +1,4 @@
+// File overview: Core frontend setup and app-level wiring for queryClient.test.ts.
 import { describe, expect, it } from "vitest";
 import axios from "axios";
 import { createQueryClient, formatQueryErrorMessage } from "./queryClient";

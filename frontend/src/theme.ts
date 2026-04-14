@@ -1,3 +1,4 @@
+// File overview: Core frontend setup and app-level wiring for theme.ts.
 import { alpha, createTheme } from "@mui/material/styles";
 
 export const theme = createTheme({

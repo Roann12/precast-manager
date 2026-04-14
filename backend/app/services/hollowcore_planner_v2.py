@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/hollowcore_planner_v2.py.
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -14,6 +15,7 @@ from ..models.project import Project
 from .public_holidays import is_south_africa_public_holiday
 
 
+# Handles  daterange flow.
 def _daterange(start: date, end: date):
     d = start
     while d <= end:
@@ -21,6 +23,7 @@ def _daterange(start: date, end: date):
         d += timedelta(days=1)
 
 
+# Handles  is working day for project flow.
 def _is_working_day_for_project(d: date, work_saturday: bool, work_sunday: bool) -> bool:
     # South Africa public holidays are treated as non-working days by default.
     if is_south_africa_public_holiday(d):
@@ -33,6 +36,7 @@ def _is_working_day_for_project(d: date, work_saturday: bool, work_sunday: bool)
     return bool(work_sunday)
 
 
+# Handles generate plan rows flow.
 def generate_plan_rows(
     *,
     db: Session,
@@ -55,6 +59,7 @@ def generate_plan_rows(
     bed capacity (length / max casts per day) could not absorb more in this window.
     """
 
+    # Handles  unplaced snapshot flow.
     def _unplaced_snapshot(remaining_list: list[dict]) -> list[dict[str, Any]]:
         return [
             {

@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Production.tsx.
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -34,6 +35,9 @@ import { PRODUCTION_SCHEDULE_KEY, fetchProductionSchedule } from "./productionQu
 import { YARD_LOCATIONS_KEY, fetchYardLocations } from "./yardQuery";
 import { useNotify } from "../notifications/NotifyContext";
 
+// Inputs: caller state/arguments related to production.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Production() {
   const notify = useNotify();
   const qc = useQueryClient();

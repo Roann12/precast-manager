@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/hollowcore_cast.py.
 from datetime import datetime, date
 
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, DateTime, Index
@@ -6,6 +7,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for hollowcore cast.
+# Maps object fields to storage columns/constraints.
 class HollowcoreCast(Base):
     __tablename__ = "hollowcore_casts"
 

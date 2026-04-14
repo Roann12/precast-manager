@@ -1,3 +1,4 @@
+// File overview: Authentication state and auth-related helpers for auth/AuthContext.tsx.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,23 +25,30 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Inputs: caller state/arguments related to auth provider.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // Source of truth for "am I signed in?" before /auth/me is fetched.
   const [tokenPresent, setTokenPresent] = useState(() => !!localStorage.getItem("access_token"));
 
   const meQuery = useQuery({
     queryKey: AUTH_ME_QUERY_KEY,
+    // Pulls current user profile from JWT-backed session.
     queryFn: async () => (await api.get<AuthUser>("/auth/me")).data,
     enabled: tokenPresent,
     retry: false,
     staleTime: 60_000,
   });
 
+  // If no token exists, treat user as logged out without querying.
   const user = tokenPresent ? (meQuery.data ?? null) : null;
   const loading = tokenPresent && !meQuery.isFetched;
 
   useEffect(() => {
+    // Global 401 handler keeps auth cleanup consistent across all API calls.
     setUnauthorizedHandler((message) => {
       localStorage.removeItem("access_token");
       qc.removeQueries({ queryKey: AUTH_ME_QUERY_KEY });
@@ -60,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [navigate, qc]);
 
   useEffect(() => {
+    // Non-401 /auth/me failures are treated as invalid local auth state.
     if (!meQuery.isError || !meQuery.error) return;
     if (axios.isAxiosError(meQuery.error) && meQuery.error.response?.status === 401) return;
     localStorage.removeItem("access_token");
@@ -68,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [meQuery.isError, meQuery.error, qc]);
 
   const logout = useCallback(() => {
+    // Clear both persistent token and cached user data.
     localStorage.removeItem("access_token");
     setTokenPresent(false);
     qc.removeQueries({ queryKey: AUTH_ME_QUERY_KEY });
@@ -75,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
+      // Backend expects OAuth-style form fields, not JSON body.
       const form = new URLSearchParams();
       form.append("username", email);
       form.append("password", password);
@@ -86,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
 
+      // Save token for future requests and prime cache with the returned user.
       localStorage.setItem("access_token", res.data.access_token);
       setTokenPresent(true);
       qc.setQueryData(AUTH_ME_QUERY_KEY, res.data.user);
@@ -107,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// Hook that manages auth state and behavior.
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");

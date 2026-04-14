@@ -1,3 +1,4 @@
+# File overview: Authentication and authorization helpers for app/auth/jwt.py.
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -6,6 +7,7 @@ from jose import jwt
 from ..core.config import settings
 
 
+# Handles create access token flow.
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(

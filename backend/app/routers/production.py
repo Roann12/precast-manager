@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/production.py.
 from datetime import date
 from typing import Optional
 
@@ -21,6 +22,8 @@ router = APIRouter(prefix="/production", tags=["production"])
 ACTIVE_PROJECT_STATUSES = ("planned", "active")
 
 
+# Data model for production update.
+# Maps object fields to storage columns/constraints.
 class ProductionUpdate(BaseModel):
     mould_id: Optional[int] = None
     production_date: Optional[date] = None
@@ -29,6 +32,7 @@ class ProductionUpdate(BaseModel):
 
 
 @router.post("/complete")
+# Handles complete flow.
 def complete(
     schedule_id: int,
     location_id: int,
@@ -79,6 +83,7 @@ def complete(
 
 
 @router.get("/schedule")
+# Handles list schedule flow.
 def list_schedule(
     include_inactive_projects: bool = False,
     db: Session = Depends(get_db),
@@ -101,6 +106,7 @@ def list_schedule(
 
 
 @router.patch("/{schedule_id}")
+# Handles update production flow.
 def update_production(
     schedule_id: int,
     body: ProductionUpdate,

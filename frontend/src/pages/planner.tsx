@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/planner.tsx.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -68,6 +69,9 @@ const addDays = (iso: string, days: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+// Inputs: caller state/arguments related to effective capacity for.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function effectiveCapacityFor(mouldId: number | undefined, baseCapacity: number | undefined, date: string, delays: DelayEvent[]): number | undefined {
   if (baseCapacity == null) return undefined;
   const lost = delays
@@ -76,6 +80,9 @@ function effectiveCapacityFor(mouldId: number | undefined, baseCapacity: number 
   return Math.max(0, baseCapacity - lost);
 }
 
+// Inputs: caller state/arguments related to planner.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Planner() {
   const notify = useNotify();
   const calendarQuery = useQuery({
@@ -1146,6 +1153,9 @@ interface DraggableCardProps {
   qc_age_days: number | null;
 }
 
+// Inputs: caller state/arguments related to draggable card.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function DraggableCard(props: DraggableCardProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `card-${props.id}`,
@@ -1219,6 +1229,9 @@ interface MouldDropZoneProps {
   children: React.ReactNode;
 }
 
+// Inputs: caller state/arguments related to mould drop zone.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function MouldDropZone({
   mould,
   production_date,

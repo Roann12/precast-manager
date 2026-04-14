@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Elements.tsx.
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -46,6 +47,9 @@ import {
 } from "./elementsQuery";
 import { useNotify } from "../notifications/NotifyContext";
 
+// Inputs: caller state/arguments related to elements.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Elements() {
   const notify = useNotify();
   const qc = useQueryClient();

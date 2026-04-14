@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/HollowcoreBeds.tsx.
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,6 +21,9 @@ import { HOLLOWCORE_BEDS_KEY, fetchHollowcoreBeds, type HollowcoreBedRow } from 
 
 type Bed = HollowcoreBedRow;
 
+// Inputs: caller state/arguments related to hollowcore beds.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function HollowcoreBeds() {
   const notify = useNotify();
   const qc = useQueryClient();

@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/planner_delay.py.
 from datetime import datetime, date
 
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Index
@@ -5,6 +6,8 @@ from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Inde
 from ..database import Base
 
 
+# Data model for planner delay.
+# Maps object fields to storage columns/constraints.
 class PlannerDelay(Base):
     __tablename__ = "planner_delays"
 

@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/calender.py.
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from ..models.production import ProductionSchedule
@@ -5,6 +6,7 @@ from ..models.mould import Mould
 from ..models.element import Element
 
 
+# Handles get production calendar flow.
 def get_production_calendar(db: Session):
 
     query = (

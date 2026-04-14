@@ -1,3 +1,4 @@
+# File overview: Business logic services for app/services/qc_lab_queue.py.
 """Shared QC lab worklist logic (cube crush schedule) for /qc/queue and dashboard metrics."""
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from ..models.project import Project
 from ..models.quality import QualityTest
 
 
+# Handles build qc lab queue flow.
 def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
     """
     Same rules as GET /qc/queue: batches needing 7d/28d (and hollowcore 1d) tests,
@@ -103,6 +105,7 @@ def build_qc_lab_queue(db: Session, factory_id: int) -> Dict[str, Any]:
 
     hollowcore_batch_ids = {str(r.batch_id) for r in hollowcore_rows if r.batch_id}
 
+    # Handles  item flow.
     def _item(r, age: int, due: date) -> Dict[str, Any]:
         is_hollowcore = str(r.batch_id) in hollowcore_batch_ids
         required_strength_mpa = r.concrete_strength_mpa

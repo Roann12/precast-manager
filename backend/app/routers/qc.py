@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/qc.py.
 from datetime import date, timedelta
 from typing import Optional
 
@@ -23,6 +24,8 @@ from ..services.wetcasting_activity import log_wetcasting_activity
 router = APIRouter(prefix="/qc", tags=["qc"])
 
 
+# Data model for quality test create.
+# Maps object fields to storage columns/constraints.
 class QualityTestCreate(BaseModel):
     element_id: int
     batch_id: Optional[str] = None
@@ -39,6 +42,7 @@ class QualityTestCreate(BaseModel):
 
 
 @router.get("/queue")
+# Handles qc queue flow.
 def qc_queue(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["QC", "admin"])),
@@ -53,6 +57,7 @@ def qc_queue(
 
 
 @router.post("/tests", status_code=201)
+# Handles create test flow.
 def create_test(
     body: QualityTestCreate,
     db: Session = Depends(get_db),
@@ -236,6 +241,7 @@ def create_test(
 
 
 @router.get("/tests")
+# Handles list tests flow.
 def list_tests(
     batch_id: Optional[str] = None,
     element_id: Optional[int] = None,
@@ -257,6 +263,7 @@ def list_tests(
 
 
 @router.get("/results")
+# Handles list results flow.
 def list_results(
     project_id: Optional[int] = None,
     db: Session = Depends(get_db),
@@ -358,6 +365,7 @@ def list_results(
 
 
 @router.get("/status")
+# Handles qc status flow.
 def qc_status(
     batch_ids: str,
     db: Session = Depends(get_db),
@@ -440,6 +448,7 @@ def qc_status(
 
 
 @router.get("/mix-stats/{mix_design_id}")
+# Handles mix stats flow.
 def mix_stats(
     mix_design_id: int,
     db: Session = Depends(get_db),
@@ -459,6 +468,7 @@ def mix_stats(
         .all()
     )
 
+    # Handles  stats flow.
     def _stats(age: int):
         vals = [
             float(t.avg_strength_mpa if t.avg_strength_mpa is not None else t.measured_strength_mpa)

@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/user.py.
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
@@ -5,6 +6,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for user.
+# Maps object fields to storage columns/constraints.
 class User(Base):
     __tablename__ = "users"
 

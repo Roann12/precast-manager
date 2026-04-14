@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/production.py.
 from datetime import datetime, date
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
@@ -5,6 +6,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for production schedule.
+# Maps object fields to storage columns/constraints.
 class ProductionSchedule(Base):
     __tablename__ = "production_schedule"
 

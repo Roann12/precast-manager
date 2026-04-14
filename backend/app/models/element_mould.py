@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/element_mould.py.
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for element mould.
+# Maps object fields to storage columns/constraints.
 class ElementMould(Base):
     __tablename__ = "element_moulds"
 

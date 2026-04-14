@@ -1,3 +1,4 @@
+# File overview: ORM models and persistence mapping for app/models/wetcasting_activity.py.
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Index
@@ -6,6 +7,8 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
+# Data model for wetcasting activity.
+# Maps object fields to storage columns/constraints.
 class WetcastingActivity(Base):
     __tablename__ = "wetcasting_activity"
 

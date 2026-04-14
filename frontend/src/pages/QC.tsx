@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/QC.tsx.
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -110,6 +111,9 @@ type QcProjectResultRow = QualityTestRow & {
   due_date: string | null;
 };
 
+// Inputs: caller state/arguments related to qc.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function QC() {
   const notify = useNotify();
   const qc = useQueryClient();

@@ -1,3 +1,4 @@
+// File overview: Shared frontend constants used across features for constants/options.ts.
 export const ELEMENT_TYPES = ["Column", "Beam", "Wall", "Slab", "Footing", "Staircase", "Pier", "Railing", "Foundation", "Hollowcore Panel","hollwcore walling" , "Other"] as const;
 export type ElementType = (typeof ELEMENT_TYPES)[number];
 

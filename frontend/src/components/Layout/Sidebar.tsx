@@ -1,3 +1,4 @@
+// File overview: Reusable UI component logic for components/Layout/Sidebar.tsx.
 import { useMemo, useState } from "react";
 import {
   Box,
@@ -60,6 +61,9 @@ const adminSupportMenuItems: MenuItem[] = [
   { label: "Factories", path: "/factories", roles: ["admin"], superAdminOnly: true },
 ];
 
+// Inputs: caller state/arguments related to can show item.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function canShowItem(item: MenuItem, role: string | undefined, factoryId: number | null | undefined) {
   if (item.superAdminOnly) return role === "admin" && factoryId === null;
   if (item.requiresFactory && factoryId === null) return false;
@@ -68,6 +72,9 @@ function canShowItem(item: MenuItem, role: string | undefined, factoryId: number
   return item.roles.includes(role);
 }
 
+// Inputs: caller state/arguments related to sidebar.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
   const location = useLocation();
   const width = collapsed ? 0 : drawerWidth;

@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/mould.py.
 from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for mould.
+# Maps object fields to storage columns/constraints.
 class Mould(Base):
     __tablename__ = "moulds"
 

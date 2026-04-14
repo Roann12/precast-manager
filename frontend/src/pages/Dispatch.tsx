@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Dispatch.tsx.
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -32,11 +33,17 @@ import { DISPATCH_ORDERS_KEY, fetchDispatchOrders } from "./dispatchQuery";
 import { YARD_INVENTORY_KEY, fetchYardInventory } from "./yardQuery";
 import { useNotify } from "../notifications/NotifyContext";
 
+// Inputs: caller state/arguments related to dispatch api error.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 function dispatchApiError(err: unknown, fallback: string) {
   const anyErr = err as { response?: { data?: { detail?: string; error?: string } } };
   return anyErr?.response?.data?.detail || anyErr?.response?.data?.error || fallback;
 }
 
+// Inputs: caller state/arguments related to dispatch.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Dispatch() {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down("md"));

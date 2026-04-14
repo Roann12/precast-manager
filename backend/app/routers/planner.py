@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/planner.py.
 from datetime import date
 from typing import Optional
 
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/planner", tags=["planner"])
 # Existing planner
 # --------------------------------
 @router.post("/generate")
+# Handles generate plan flow.
 def generate_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["planner", "admin"])),
@@ -44,6 +46,7 @@ def generate_plan(
 # Smart auto planner
 # --------------------------------
 @router.post("/auto-plan")
+# Handles auto plan flow.
 def auto_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["planner", "admin"])),
@@ -76,6 +79,7 @@ class PlannerDelayIn(BaseModel):
 
 
 @router.get("/delays")
+# Handles list delays flow.
 def list_delays(
     planner_type: str,
     from_date: Optional[date] = None,
@@ -102,6 +106,7 @@ def list_delays(
 
 
 @router.post("/delays", status_code=201)
+# Handles create delay flow.
 def create_delay(
     body: PlannerDelayIn,
     db: Session = Depends(get_db),
@@ -146,6 +151,7 @@ def create_delay(
 
 
 @router.delete("/delays/{delay_id:int}", status_code=204)
+# Handles delete delay flow.
 def delete_delay(
     delay_id: int,
     db: Session = Depends(get_db),

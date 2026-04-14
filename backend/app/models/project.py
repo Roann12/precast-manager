@@ -1,9 +1,12 @@
+# File overview: ORM models and persistence mapping for app/models/project.py.
 from sqlalchemy import Column, Integer, String, Date, DateTime, Index, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
+# Data model for project.
+# Maps object fields to storage columns/constraints.
 class Project(Base):
     __tablename__ = "projects"
 

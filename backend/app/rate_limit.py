@@ -1,3 +1,4 @@
+# File overview: Application module logic for app/rate_limit.py.
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 

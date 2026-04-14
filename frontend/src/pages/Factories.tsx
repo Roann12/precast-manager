@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/Factories.tsx.
 import { useEffect, useState } from "react";
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import api from "../api/client";
@@ -8,6 +9,9 @@ type FactoryRow = {
   is_active: boolean;
 };
 
+// Inputs: caller state/arguments related to factories.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function Factories() {
   const [factories, setFactories] = useState<FactoryRow[]>([]);
   const [loading, setLoading] = useState(true);

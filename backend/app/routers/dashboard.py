@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/dashboard.py.
 from datetime import date, timedelta
 from typing import Optional
 
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 ACTIVE_PROJECT_STATUSES = ("planned", "active")
 
 
+# Handles  normalize planned label flow.
 def _normalize_planned_label(label: str) -> str:
     const = (label or "").strip()
     lower = const.lower()
@@ -39,6 +41,7 @@ def _normalize_planned_label(label: str) -> str:
 # Production summary dashboard
 # -----------------------------
 @router.get("/production")
+# Handles production dashboard flow.
 def production_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -73,6 +76,7 @@ def production_dashboard(
 # Production calendar view
 # -----------------------------
 @router.get("/calendar")
+# Handles production calendar flow.
 def production_calendar(
     include_inactive_projects: bool = Query(default=False),
     db: Session = Depends(get_db),
@@ -134,6 +138,7 @@ def production_calendar(
 # Mould Utilization Dashboard
 # -----------------------------
 @router.get("/mould-utilization")
+# Handles mould utilization flow.
 def mould_utilization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -195,6 +200,7 @@ def mould_utilization(
 # Yard Stock Dashboard
 # -----------------------------
 @router.get("/yard-stock")
+# Handles yard stock flow.
 def yard_stock(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     factory_id = get_current_factory_id(current_user)
     results = (
@@ -223,6 +229,7 @@ def yard_stock(db: Session = Depends(get_db), current_user: User = Depends(get_c
 
 
 @router.get("/overview")
+# Handles overview flow.
 def overview(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     High-level KPI snapshot for the dashboard.
@@ -447,6 +454,7 @@ def overview(db: Session = Depends(get_db), current_user: User = Depends(get_cur
 
 
 @router.get("/planned-by-type")
+# Handles planned by type flow.
 def planned_by_type(
     planned_date: Optional[date] = Query(None, alias="date"),
     db: Session = Depends(get_db),
@@ -509,6 +517,7 @@ def planned_by_type(
 
 
 @router.get("/capacity")
+# Handles capacity flow.
 def capacity(
     days: int = 14,
     db: Session = Depends(get_db),
@@ -601,6 +610,7 @@ def capacity(
 
 
 @router.get("/production-completion")
+# Handles production completion flow.
 def production_completion(
     start_date: Optional[date] = Query(None, alias="start_date"),
     end_date: Optional[date] = Query(None, alias="end_date"),
@@ -683,6 +693,7 @@ def production_completion(
 
 
 @router.get("/late-items")
+# Handles late items flow.
 def late_items(
     start_date: Optional[date] = Query(None, alias="start_date"),
     end_date: Optional[date] = Query(None, alias="end_date"),
@@ -751,6 +762,7 @@ def late_items(
 
 
 @router.get("/project-summaries")
+# Handles project summaries flow.
 def project_summaries(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["planner", "admin"])),

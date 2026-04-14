@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/mix_designs.py.
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/mix-designs", tags=["mix-designs"])
 
 
 @router.get("", response_model=List[MixDesign])
+# Handles list mix designs flow.
 def list_mix_designs(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     q = db.query(MixDesignModel).order_by(MixDesignModel.active.desc(), MixDesignModel.name)
     # Factories must not see other factories' confidential mix designs.
@@ -21,6 +23,7 @@ def list_mix_designs(db: Session = Depends(get_db), current_user=Depends(get_cur
 
 
 @router.post("", response_model=MixDesign, status_code=201)
+# Handles create mix design flow.
 def create_mix_design(
     body: MixDesignCreate,
     db: Session = Depends(get_db),
@@ -36,6 +39,7 @@ def create_mix_design(
 
 
 @router.get("/{mix_design_id}", response_model=MixDesign)
+# Handles get mix design flow.
 def get_mix_design(mix_design_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     obj = db.get(MixDesignModel, mix_design_id)
     if not obj:
@@ -46,6 +50,7 @@ def get_mix_design(mix_design_id: int, db: Session = Depends(get_db), current_us
 
 
 @router.put("/{mix_design_id}", response_model=MixDesign)
+# Handles update mix design flow.
 def update_mix_design(
     mix_design_id: int,
     body: MixDesignUpdate,
@@ -65,6 +70,7 @@ def update_mix_design(
 
 
 @router.delete("/{mix_design_id}", status_code=204)
+# Handles delete mix design flow.
 def delete_mix_design(
     mix_design_id: int,
     db: Session = Depends(get_db),

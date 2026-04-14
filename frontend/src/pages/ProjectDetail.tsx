@@ -1,3 +1,4 @@
+// File overview: Page component and UI logic for pages/ProjectDetail.tsx.
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +19,9 @@ import type { Element } from "../types/api";
 import { ELEMENTS_ALL_KEY, fetchElementsAll } from "./elementsQuery";
 import { fetchProjectDetail, projectDetailQueryKey } from "./projectsQuery";
 
+// Inputs: caller state/arguments related to project detail.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const id = Number(projectId);

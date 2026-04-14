@@ -1,3 +1,4 @@
+# File overview: API route handlers and request orchestration for app/routers/dispatch.py.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import date
@@ -21,6 +22,7 @@ from ..models.element import Element
 router = APIRouter(prefix="/dispatch", tags=["dispatch"])
 
 
+# Handles  serialize dispatch order with actor flow.
 def _serialize_dispatch_order_with_actor(
     order: DispatchOrder,
     status_changed_by_name: str | None,
@@ -39,6 +41,7 @@ def _serialize_dispatch_order_with_actor(
 
 
 @router.post("/create")
+# Handles create dispatch order flow.
 def create_dispatch_order(
     project_id: int,
     dispatch_date: str,
@@ -69,6 +72,7 @@ def create_dispatch_order(
 
 
 @router.post("/add-item")
+# Handles add item flow.
 def add_item(
     dispatch_id: int,
     yard_inventory_id: int,
@@ -90,6 +94,7 @@ def add_item(
 
 
 @router.post("/remove-item")
+# Handles remove item flow.
 def remove_item(
     dispatch_item_id: int,
     db: Session = Depends(get_db),
@@ -107,6 +112,7 @@ def remove_item(
 
 
 @router.get("")
+# Handles list dispatch orders flow.
 def list_dispatch_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["dispatch", "admin"])),
@@ -134,6 +140,7 @@ def list_dispatch_orders(
 
 
 @router.get("/{dispatch_id:int}")
+# Handles get dispatch flow.
 def get_dispatch(
     dispatch_id: int,
     db: Session = Depends(get_db),
@@ -163,6 +170,7 @@ def get_dispatch(
 
 
 @router.get("/export-note")
+# Handles export dispatch note flow.
 def export_dispatch_note(
     start_date: str | None = None,
     end_date: str | None = None,
@@ -180,6 +188,7 @@ def export_dispatch_note(
 
     factory_id = get_current_factory_id(current_user)
 
+    # Handles  parse flow.
     def _parse(d: str | None) -> date | None:
         if not d:
             return None
@@ -250,6 +259,7 @@ def export_dispatch_note(
 
 
 @router.post("/{dispatch_id:int}/complete")
+# Handles complete dispatch order flow.
 def complete_dispatch_order(
     dispatch_id: int,
     db: Session = Depends(get_db),
@@ -269,6 +279,7 @@ def complete_dispatch_order(
 
 
 @router.post("/{dispatch_id:int}/cancel")
+# Handles cancel dispatch order flow.
 def cancel_dispatch_order(
     dispatch_id: int,
     db: Session = Depends(get_db),
@@ -288,6 +299,7 @@ def cancel_dispatch_order(
 
 
 @router.post("/{dispatch_id:int}/reopen")
+# Handles reopen dispatch order flow.
 def reopen_dispatch_order(
     dispatch_id: int,
     db: Session = Depends(get_db),

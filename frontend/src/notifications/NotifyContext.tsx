@@ -1,3 +1,4 @@
+// File overview: Notification context/state handling for notifications/NotifyContext.tsx.
 import {
   createContext,
   useCallback,
@@ -12,6 +13,9 @@ type ShowNotify = (message: string, severity?: AlertColor) => void;
 
 const NotifyContext = createContext<ShowNotify | null>(null);
 
+// Inputs: caller state/arguments related to notify provider.
+// Process: applies business rules and transformations for this step.
+// Output: deterministic value/state used by the next workflow stage.
 export function NotifyProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -60,6 +64,7 @@ export function NotifyProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Hook that manages notify state and behavior.
 export function useNotify() {
   const show = useContext(NotifyContext);
 

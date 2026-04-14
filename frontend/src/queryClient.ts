@@ -1,8 +1,10 @@
+// File overview: Core frontend setup and app-level wiring for queryClient.ts.
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 export type QueryNotifyApi = { error: (message: string) => void };
 
+// Formats query error message for display.
 export function formatQueryErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const d = error.response?.data;
@@ -24,10 +26,12 @@ export function formatQueryErrorMessage(error: unknown): string {
   return "Something went wrong";
 }
 
+// Creates and configures query client.
 export function createQueryClient(getNotify: () => QueryNotifyApi) {
   return new QueryClient({
     queryCache: new QueryCache({
       onError: (error) => {
+        // AuthContext handles 401 flow globally; suppress duplicate toast noise here.
         if (axios.isAxiosError(error) && error.response?.status === 401) return;
         getNotify().error(formatQueryErrorMessage(error));
       },

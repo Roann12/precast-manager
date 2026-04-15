@@ -1,0 +1,66 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or SHA)"
+        required: false
+        default: "main"
+      rebuild_images:
+        description: "Rebuild Docker images"
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Add server host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
+          REF: ${{ inputs.ref }}
+          REBUILD: ${{ inputs.rebuild_images }}
+        run: |
+          ssh "${PROD_USER}@${PROD_HOST}" "PROD_APP_DIR='${PROD_APP_DIR}' REF='${REF}' REBUILD='${REBUILD}' bash -s" <<'EOF'
+          set -euo pipefail
+          cd "${PROD_APP_DIR}"
+
+          git fetch --all --prune
+          git checkout "${REF}"
+          if git ls-remote --exit-code --heads origin "${REF}" >/dev/null 2>&1; then
+            git pull --ff-only origin "${REF}"
+          fi
+
+          if [ "${REBUILD}" = "true" ]; then
+            docker compose up -d --build
+          else
+            docker compose up -d
+          fi
+
+          docker compose ps
+          EOF

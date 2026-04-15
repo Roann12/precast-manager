@@ -38,6 +38,21 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Create release bundle
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='docker-compose.yml' \
+            -czf /tmp/precast-release.tgz \
+            .
+
+      - name: Upload release bundle
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          scp /tmp/precast-release.tgz "${PROD_USER}@${PROD_HOST}:/tmp/precast-release.tgz"
+
       - name: Deploy on server
         env:
           PROD_HOST: ${{ secrets.PROD_HOST }}
@@ -50,10 +65,15 @@ jobs:
           set -euo pipefail
           cd "${PROD_APP_DIR}"
 
-          git fetch --all --prune
-          git checkout "${REF}"
-          if git ls-remote --exit-code --heads origin "${REF}" >/dev/null 2>&1; then
-            git pull --ff-only origin "${REF}"
+          # Keep production secrets local on server.
+          if [ -f .env ]; then
+            cp .env /tmp/precast-env-backup
+          fi
+
+          tar -xzf /tmp/precast-release.tgz -C "${PROD_APP_DIR}"
+
+          if [ -f /tmp/precast-env-backup ]; then
+            mv /tmp/precast-env-backup .env
           fi
 
           if [ "${REBUILD}" = "true" ]; then

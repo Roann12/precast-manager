@@ -159,12 +159,15 @@ def create_test(
     except Exception:
         req_val = None
 
+    avg = (body.cube1_strength_mpa + body.cube2_strength_mpa + body.cube3_strength_mpa) / 3.0
     passed = None
     if req_val is not None:
-        avg = (body.cube1_strength_mpa + body.cube2_strength_mpa + body.cube3_strength_mpa) / 3.0
-        passed = bool(avg >= float(req_val))
-    else:
-        avg = (body.cube1_strength_mpa + body.cube2_strength_mpa + body.cube3_strength_mpa) / 3.0
+        # 7-day strength is early-age and should not be treated as a failure
+        # against the ultimate required strength. It may still pass early.
+        if body.age_days == 7:
+            passed = True if avg >= float(req_val) else None
+        else:
+            passed = bool(avg >= float(req_val))
 
     if allow_hollowcore_retest and existing_same_age is not None:
         # Table enforces unique (batch_id, age_days): overwrite failed 1-day value with retest.

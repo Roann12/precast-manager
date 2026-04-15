@@ -11,6 +11,7 @@ from ..models.user import User
 from ..models.mould import Mould as MouldModel
 from ..models.element import Element as ElementModel
 from ..models.project import Project as ProjectModel
+from ..models.mix_design import MixDesign as MixDesignModel
 from ..models.element_mould import ElementMould
 from ..models.yard import YardInventory as YardInventoryModel
 from ..models.production import ProductionSchedule
@@ -19,6 +20,40 @@ from ..services.wetcasting_activity import log_wetcasting_activity
 
 router = APIRouter(prefix="/elements", tags=["elements"])
 ACTIVE_PROJECT_STATUSES = ("planned", "active")
+
+
+def _is_hollowcore_payload(panel_length_mm: Optional[int], slab_thickness_mm: Optional[int]) -> bool:
+    return panel_length_mm is not None and slab_thickness_mm is not None
+
+
+def _validate_hollowcore_mix_design(
+    db: Session,
+    *,
+    factory_id: int,
+    mix_design_id: Optional[int],
+    panel_length_mm: Optional[int],
+    slab_thickness_mm: Optional[int],
+):
+    if not _is_hollowcore_payload(panel_length_mm, slab_thickness_mm):
+        return
+    if mix_design_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Hollowcore elements require a mix design.",
+        )
+    exists = (
+        db.query(MixDesignModel.id)
+        .filter(
+            MixDesignModel.id == mix_design_id,
+            MixDesignModel.factory_id == factory_id,
+        )
+        .first()
+    )
+    if not exists:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Selected mix design is invalid for this factory.",
+        )
 
 
 @router.post("/", response_model=Element)
@@ -30,6 +65,13 @@ def create_element(
 ):
     factory_id = get_current_factory_id(current_user)
     data = element.dict()
+    _validate_hollowcore_mix_design(
+        db,
+        factory_id=factory_id,
+        mix_design_id=data.get("mix_design_id"),
+        panel_length_mm=data.get("panel_length_mm"),
+        slab_thickness_mm=data.get("slab_thickness_mm"),
+    )
     allowed_mould_ids = data.pop("allowed_mould_ids", []) or []
 
     # Ensure mould links cannot cross factories.
@@ -188,6 +230,17 @@ def update_element(
 
     payload = update.dict(exclude_unset=True)
     allowed_mould_ids = payload.pop("allowed_mould_ids", None)
+
+    next_mix_design_id = payload.get("mix_design_id", element.mix_design_id)
+    next_panel_length_mm = payload.get("panel_length_mm", element.panel_length_mm)
+    next_slab_thickness_mm = payload.get("slab_thickness_mm", element.slab_thickness_mm)
+    _validate_hollowcore_mix_design(
+        db,
+        factory_id=factory_id,
+        mix_design_id=next_mix_design_id,
+        panel_length_mm=next_panel_length_mm,
+        slab_thickness_mm=next_slab_thickness_mm,
+    )
 
     for field, value in payload.items():
         setattr(element, field, value)

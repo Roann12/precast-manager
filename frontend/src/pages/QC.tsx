@@ -228,7 +228,7 @@ export default function QC() {
     URL.revokeObjectURL(url);
   };
 
-  const passPreview = useMemo(() => {
+  const passPreview = useMemo<"pass" | "pending" | "fail" | null>(() => {
     if (!selected) return null;
     const req = selected.required_strength_mpa ?? selected.concrete_strength_mpa;
     const s1 = cube1Strength === "" ? null : Number(cube1Strength);
@@ -237,7 +237,9 @@ export default function QC() {
     if (req == null || s1 == null || s2 == null || s3 == null) return null;
     if ([s1, s2, s3].some((v) => Number.isNaN(v))) return null;
     const avg = (s1 + s2 + s3) / 3;
-    return avg >= req;
+    if (avg >= req) return "pass";
+    if (selected.age_days === 7) return "pending";
+    return "fail";
   }, [cube1Strength, cube2Strength, cube3Strength, selected]);
 
   const avgPreview = useMemo(() => {
@@ -597,8 +599,13 @@ export default function QC() {
             </Grid>
             <Grid item xs={12}>
               {selected && passPreview != null && (
-                <Alert severity={passPreview ? "success" : "error"} sx={{ mb: 1 }}>
-                  {passPreview ? "PASS" : "FAIL"} (auto-calculated vs required MPa)
+                <Alert
+                  severity={passPreview === "pass" ? "success" : passPreview === "fail" ? "error" : "info"}
+                  sx={{ mb: 1 }}
+                >
+                  {passPreview === "pass" && "PASS (auto-calculated vs required MPa)"}
+                  {passPreview === "fail" && "FAIL (auto-calculated vs required MPa)"}
+                  {passPreview === "pending" && "Below required MPa at 7 days (recorded as pending, not fail)."}
                 </Alert>
               )}
               {!eligible && selected && ageDays !== 1 && (

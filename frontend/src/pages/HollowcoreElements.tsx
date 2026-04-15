@@ -19,7 +19,14 @@ import {
 } from "@mui/material";
 import api from "../api/client";
 import type { Element, ElementCreate, ElementUpdate } from "../types/api";
-import { ELEMENTS_ALL_KEY, ELEMENTS_PREFAB_LIST_KEY, PROJECTS_OPTIONS_KEY, fetchProjectsOptions } from "./elementsQuery";
+import {
+  ELEMENTS_ALL_KEY,
+  ELEMENTS_PREFAB_LIST_KEY,
+  MIX_DESIGNS_ACTIVE_KEY,
+  PROJECTS_OPTIONS_KEY,
+  fetchActiveMixDesigns,
+  fetchProjectsOptions,
+} from "./elementsQuery";
 import {
   HOLLOWCORE_CASTS_REGISTRY_KEY,
   HOLLOWCORE_ELEMENTS_HC_KEY,
@@ -56,6 +63,11 @@ export default function HollowcoreElements() {
     queryFn: fetchProjectsOptions,
     staleTime: 60_000,
   });
+  const mixDesignsQuery = useQuery({
+    queryKey: MIX_DESIGNS_ACTIVE_KEY,
+    queryFn: fetchActiveMixDesigns,
+    staleTime: 60_000,
+  });
 
   const castsRegistryQuery = useQuery({
     queryKey: HOLLOWCORE_CASTS_REGISTRY_KEY,
@@ -64,6 +76,7 @@ export default function HollowcoreElements() {
 
   const items = itemsQuery.data ?? [];
   const projects = projectsQuery.data ?? [];
+  const mixDesigns = mixDesignsQuery.data ?? [];
 
   const invalidateHc = () =>
     // Keep all dependent screens in sync after any hollowcore element change.
@@ -154,11 +167,13 @@ export default function HollowcoreElements() {
     setForm((f) => {
       if (
         name === "project_id" ||
+        name === "mix_design_id" ||
         name === "quantity" ||
         name === "panel_length_mm" ||
         name === "slab_thickness_mm"
       ) {
         // Numeric fields are normalized to numbers for backend payload consistency.
+        if (name === "mix_design_id") return { ...f, mix_design_id: value === "" ? null : Number(value) };
         return { ...f, [name]: value === "" ? 0 : Number(value) };
       }
       if (name === "due_date") return { ...f, due_date: value === "" ? null : value };
@@ -187,6 +202,7 @@ export default function HollowcoreElements() {
     // Prefill only editable fields; immutable fields stay as-is.
     setEditingId(el.id);
     setEditForm({
+      mix_design_id: el.mix_design_id ?? null,
       element_mark: el.element_mark,
       due_date: el.due_date,
       quantity: el.quantity,
@@ -203,6 +219,9 @@ export default function HollowcoreElements() {
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditForm((f) => {
+      if (name === "mix_design_id") {
+        return { ...f, mix_design_id: value === "" ? null : Number(value) };
+      }
       if (name === "quantity" || name === "panel_length_mm" || name === "slab_thickness_mm") {
         return { ...f, [name]: value === "" ? null : Number(value) };
       }
@@ -301,6 +320,11 @@ export default function HollowcoreElements() {
           Failed to load hollowcore elements.
         </Alert>
       ) : null}
+      {mixDesignsQuery.isError ? (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Failed to load mix designs.
+        </Alert>
+      ) : null}
 
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <Chip color="success" label={`Finished: ${totals.completed}`} />
@@ -337,6 +361,25 @@ export default function HollowcoreElements() {
                 value={form.element_mark}
                 onChange={handleChange}
               />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2.5}>
+              <TextField
+                label="Mix design"
+                name="mix_design_id"
+                size="small"
+                select
+                fullWidth
+                value={form.mix_design_id ?? ""}
+                onChange={handleChange}
+              >
+                <MenuItem value="">Select mix...</MenuItem>
+                {mixDesigns.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    {m.name}
+                    {m.target_strength_mpa != null ? ` • ${m.target_strength_mpa} MPa` : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
               <TextField
@@ -392,6 +435,7 @@ export default function HollowcoreElements() {
                 disabled={
                   loading ||
                   !form.project_id ||
+                  !form.mix_design_id ||
                   !form.element_mark.trim() ||
                   !form.quantity ||
                   !form.panel_length_mm ||
@@ -414,6 +458,7 @@ export default function HollowcoreElements() {
             <TableCell align="right">Qty</TableCell>
             <TableCell align="right">Panel length (mm)</TableCell>
             <TableCell align="right">Thickness (mm)</TableCell>
+            <TableCell>Mix design</TableCell>
             <TableCell>Active</TableCell>
             <TableCell>Stage (automatic)</TableCell>
             <TableCell>Actions</TableCell>
@@ -493,6 +538,32 @@ export default function HollowcoreElements() {
                   e.slab_thickness_mm ?? "—"
                 )}
               </TableCell>
+              <TableCell>
+                {editingId === e.id ? (
+                  <TextField
+                    size="small"
+                    name="mix_design_id"
+                    select
+                    value={(editForm.mix_design_id as number | null | undefined) ?? ""}
+                    onChange={handleEditChange}
+                    sx={{ minWidth: 190 }}
+                    error={editForm.mix_design_id == null}
+                    helperText={editForm.mix_design_id == null ? "Required for hollowcore" : " "}
+                  >
+                    <MenuItem value="">Select mix...</MenuItem>
+                    {mixDesigns.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                        {m.target_strength_mpa != null ? ` • ${m.target_strength_mpa} MPa` : ""}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  (e.mix_design_id != null
+                    ? mixDesigns.find((m) => m.id === e.mix_design_id)?.name ?? `#${e.mix_design_id}`
+                    : "—")
+                )}
+              </TableCell>
               <TableCell>{e.active === false ? "No" : "Yes"}</TableCell>
               <TableCell>
                 {autoStageByElementId[e.id] ?? "not_started"}
@@ -500,7 +571,11 @@ export default function HollowcoreElements() {
               <TableCell>
                 {editingId === e.id ? (
                   <>
-                    <Button size="small" onClick={() => saveEdit(e.id)} disabled={loading}>
+                    <Button
+                      size="small"
+                      onClick={() => saveEdit(e.id)}
+                      disabled={loading || editForm.mix_design_id == null}
+                    >
                       Save
                     </Button>
                     <Button size="small" onClick={cancelEdit} disabled={loading}>

@@ -556,6 +556,7 @@ export default function HollowcoreCasts() {
     Promise.all([
       qc.invalidateQueries({ queryKey: hollowcoreCastsDayKey(day, statusFilter) }),
       qc.invalidateQueries({ queryKey: HOLLOWCORE_CASTS_REGISTRY_KEY }),
+      qc.invalidateQueries({ queryKey: ["dashboard"] }),
     ]);
 
   const bedMap = useMemo(() => new Map(beds.map((b) => [Number(b.id), b.name] as const)), [beds]);

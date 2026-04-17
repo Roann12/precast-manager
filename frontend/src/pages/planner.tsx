@@ -1,6 +1,6 @@
 // File overview: Page component and UI logic for pages/planner.tsx.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   closestCenter,
@@ -85,6 +85,7 @@ function effectiveCapacityFor(mouldId: number | undefined, baseCapacity: number 
 // Output: deterministic value/state used by the next workflow stage.
 export default function Planner() {
   const notify = useNotify();
+  const queryClient = useQueryClient();
   const calendarQuery = useQuery({
     queryKey: PLANNER_CALENDAR_KEY,
     queryFn: fetchPlannerCalendar,
@@ -141,6 +142,9 @@ export default function Planner() {
     const { data } = await calendarQuery.refetch();
     return data ?? [];
   };
+  const refreshDashboardOverview = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  }, [queryClient]);
 
   const loadDelays = async (fromDate?: string, toDate?: string) => {
     try {
@@ -325,6 +329,7 @@ export default function Planner() {
       })
       .then(() => loadDelays(dateKeys.at(0), dateKeys.at(-1)))
       .then(() => loadCalendar())
+      .then(() => refreshDashboardOverview())
       .then(() => setPendingDelayAutoShift(true))
       .then(() => setDelayReason(""))
       .catch((e) => {
@@ -339,6 +344,7 @@ export default function Planner() {
     api
       .delete(`/planner/delays/${id}`)
       .then(() => loadDelays(dateKeys.at(0), dateKeys.at(-1)))
+      .then(() => refreshDashboardOverview())
       .catch((e) => {
         console.error(e);
         notify.error("Failed to delete delay");
@@ -459,6 +465,7 @@ export default function Planner() {
         });
       }
       await loadCalendar();
+      await refreshDashboardOverview();
     } catch (e) {
       console.error(e);
       if (!silent) {
@@ -469,7 +476,7 @@ export default function Planner() {
     } finally {
       setPlanning(false);
     }
-  }, [delayAutoShiftPreview.moves, mouldIdByName, calendarQuery, notify]);
+  }, [delayAutoShiftPreview.moves, mouldIdByName, notify, refreshDashboardOverview]);
 
   const runGenerate = async (
     mode: "generate" | "auto-plan",
@@ -486,6 +493,7 @@ export default function Planner() {
         notify.success(`Scheduled batches: ${res.data.scheduled_batches}`);
       }
       await loadCalendar();
+      await refreshDashboardOverview();
       // Always queue a delay enforcement pass after generate/auto-plan.
       setPendingDelayAutoShift(true);
       if (mode === "auto-plan") {
@@ -636,7 +644,8 @@ export default function Planner() {
         production_date: overData.production_date,
       });
 
-      loadCalendar();
+      await loadCalendar();
+      await refreshDashboardOverview();
     } catch (e) {
       if (isAxiosError(e) && e.response?.status === 400) {
         const raw =

@@ -347,6 +347,9 @@ export default function HollowcorePlanner() {
   const enableGridPan = !isNarrowPlanner;
 
   const qClient = useQueryClient();
+  const refreshDashboardOverview = async () => {
+    await qClient.invalidateQueries({ queryKey: ["dashboard"] });
+  };
   const [start, setStart] = useState(todayStr());
   const [end, setEnd] = useState(addDays(todayStr(), 14));
   const [generatedBeds, setGeneratedBeds] = useState<Bed[] | null>(null);
@@ -545,6 +548,7 @@ export default function HollowcorePlanner() {
         qClient.invalidateQueries({ queryKey: ELEMENTS_PREFAB_LIST_KEY }),
         qClient.invalidateQueries({ queryKey: HOLLOWCORE_ELEMENTS_HC_KEY }),
         qClient.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
+        refreshDashboardOverview(),
       ]);
       // Re-fetch authoritative DB data so planner reflects committed truth, not local draft.
       const raw = await qClient.fetchQuery({
@@ -619,6 +623,7 @@ export default function HollowcorePlanner() {
       await Promise.all([
         qClient.invalidateQueries({ queryKey: HOLLOWCORE_CASTS_REGISTRY_KEY }),
         qClient.invalidateQueries({ queryKey: QC_QUEUE_KEY }),
+        refreshDashboardOverview(),
       ]);
       refreshPlanner();
     } catch (e) {

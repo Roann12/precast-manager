@@ -368,7 +368,7 @@ function AttentionDetailsDialog(props: {
                 Late scheduled items ({overview.late_scheduled_items})
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Go to <b>Production Line</b> to see the cards marked <b>Over due</b>.
+                Go to <b>Planner</b> to see the cards marked <b>Over due</b> and adjust schedule dates.
               </Typography>
             </Stack>
           )}
@@ -464,20 +464,19 @@ function AttentionDetailsDialog(props: {
       <DialogActions>
         <Button
           onClick={() => {
-            // Simple navigation approach: keep dependencies minimal.
+            window.location.href = "/planner";
+          }}
+          disabled={overview.late_scheduled_items === 0 && overview.unscheduled_elements === 0}
+        >
+          Open Planner
+        </Button>
+        <Button
+          onClick={() => {
             window.location.href = "/production";
           }}
           disabled={overview.late_scheduled_items === 0}
         >
           Open Production Line
-        </Button>
-        <Button
-          onClick={() => {
-            window.location.href = "/planner";
-          }}
-          disabled={overview.unscheduled_elements === 0}
-        >
-          Open Planner
         </Button>
         <Button
           onClick={() => {

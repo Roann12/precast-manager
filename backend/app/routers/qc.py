@@ -41,6 +41,17 @@ class QualityTestCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class QualityTestUpdate(BaseModel):
+    cube1_weight_kg: float
+    cube1_strength_mpa: float
+    cube2_weight_kg: float
+    cube2_strength_mpa: float
+    cube3_weight_kg: float
+    cube3_strength_mpa: float
+    test_date: date
+    notes: Optional[str] = None
+
+
 @router.get("/queue")
 # Handles qc queue flow.
 def qc_queue(
@@ -227,6 +238,97 @@ def create_test(
         user_id=current_user.id,
         section="qc",
         action="create_test",
+        entity_type="quality_test",
+        entity_id=test.id,
+        details={
+            "batch_id": test.batch_id,
+            "element_id": test.element_id,
+            "age_days": test.age_days,
+            "passed": test.passed,
+            "avg_strength_mpa": test.avg_strength_mpa,
+            "required_strength_mpa": test.required_strength_mpa,
+            "test_date": test.test_date.isoformat() if test.test_date else None,
+        },
+    )
+    db.commit()
+    return test
+
+
+@router.patch("/tests/{test_id}")
+# Handles update test flow.
+def update_test(
+    test_id: int,
+    body: QualityTestUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["QC", "admin"])),
+):
+    factory_id = get_current_factory_id(current_user)
+    test = (
+        db.query(QualityTest)
+        .join(Element, QualityTest.element_id == Element.id)
+        .filter(QualityTest.id == test_id)
+        .filter(Element.factory_id == factory_id)
+        .first()
+    )
+    if not test:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="QC test not found")
+
+    if test.batch_id:
+        sched = (
+            db.query(ProductionSchedule)
+            .filter(ProductionSchedule.batch_id == test.batch_id, ProductionSchedule.factory_id == factory_id)
+            .order_by(ProductionSchedule.id.desc())
+            .first()
+        )
+        cast_date = sched.production_date if sched else None
+        if cast_date is None:
+            hollow_sched = (
+                db.query(HollowcoreCast)
+                .join(Element, HollowcoreCast.element_id == Element.id)
+                .filter(HollowcoreCast.batch_id == test.batch_id, Element.factory_id == factory_id)
+                .order_by(HollowcoreCast.id.desc())
+                .first()
+            )
+            if hollow_sched:
+                cast_date = hollow_sched.cast_date
+        if cast_date is not None and test.age_days is not None and int(test.age_days) != 1:
+            age_elapsed = (body.test_date - cast_date).days
+            if age_elapsed < int(test.age_days):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Too early for {int(test.age_days)}-day test. Earliest: {(cast_date + timedelta(days=int(test.age_days))).isoformat()}",
+                )
+
+    avg = (body.cube1_strength_mpa + body.cube2_strength_mpa + body.cube3_strength_mpa) / 3.0
+    passed = test.passed
+    req_val = float(test.required_strength_mpa) if test.required_strength_mpa is not None else None
+    if req_val is not None and test.age_days is not None:
+        if int(test.age_days) == 7:
+            passed = True if avg >= req_val else None
+        else:
+            passed = bool(avg >= req_val)
+
+    test.cube1_weight_kg = body.cube1_weight_kg
+    test.cube1_strength_mpa = body.cube1_strength_mpa
+    test.cube2_weight_kg = body.cube2_weight_kg
+    test.cube2_strength_mpa = body.cube2_strength_mpa
+    test.cube3_weight_kg = body.cube3_weight_kg
+    test.cube3_strength_mpa = body.cube3_strength_mpa
+    test.avg_strength_mpa = avg
+    test.measured_strength_mpa = avg
+    test.result = f"{avg:g} MPa avg @ {int(test.age_days or 0)}d"
+    test.passed = passed
+    test.test_date = body.test_date
+    test.notes = body.notes
+
+    db.commit()
+    db.refresh(test)
+    log_wetcasting_activity(
+        db,
+        factory_id=factory_id,
+        user_id=current_user.id,
+        section="qc",
+        action="update_test",
         entity_type="quality_test",
         entity_id=test.id,
         details={

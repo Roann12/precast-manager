@@ -4,6 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   Table,
   TableBody,
@@ -45,6 +49,9 @@ const toDateOnlyValue = (s: string) => {
   if (Number.isNaN(d.getTime())) return null;
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 };
+
+const format3Decimals = (value: number | null | undefined) =>
+  value == null || Number.isNaN(value) ? "" : value.toFixed(3);
 
 type QcDueItem = {
   schedule_id: number;
@@ -170,6 +177,17 @@ export default function QC() {
   const [testDate, setTestDate] = useState<string>(toLocalISODate());
   const [notes, setNotes] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<QcProjectResultRow | null>(null);
+  const [editCube1Weight, setEditCube1Weight] = useState<string>("");
+  const [editCube1Strength, setEditCube1Strength] = useState<string>("");
+  const [editCube2Weight, setEditCube2Weight] = useState<string>("");
+  const [editCube2Strength, setEditCube2Strength] = useState<string>("");
+  const [editCube3Weight, setEditCube3Weight] = useState<string>("");
+  const [editCube3Strength, setEditCube3Strength] = useState<string>("");
+  const [editTestDate, setEditTestDate] = useState<string>(toLocalISODate());
+  const [editNotes, setEditNotes] = useState<string>("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const queueItemLabel = (i: QcDueItem, includeDueDate = false) => {
     const retestPrefix = i.is_retest ? "[Retest] " : "";
@@ -250,6 +268,15 @@ export default function QC() {
     if ([s1, s2, s3].some((v) => Number.isNaN(v))) return null;
     return (s1 + s2 + s3) / 3;
   }, [cube1Strength, cube2Strength, cube3Strength]);
+
+  const editAvgPreview = useMemo(() => {
+    const s1 = editCube1Strength === "" ? null : Number(editCube1Strength);
+    const s2 = editCube2Strength === "" ? null : Number(editCube2Strength);
+    const s3 = editCube3Strength === "" ? null : Number(editCube3Strength);
+    if (s1 == null || s2 == null || s3 == null) return null;
+    if ([s1, s2, s3].some((v) => Number.isNaN(v))) return null;
+    return (s1 + s2 + s3) / 3;
+  }, [editCube1Strength, editCube2Strength, editCube3Strength]);
 
   const eligible = useMemo(() => {
     if (!selected) return false;
@@ -332,6 +359,74 @@ export default function QC() {
     setCube3Weight("");
     setCube3Strength("");
     setNotes("");
+  };
+
+  const loadTestForEdit = (test: QualityTestRow) => {
+    const row = test as QcProjectResultRow;
+    setEditingRow(row);
+    setEditTestDate(String(row.test_date).slice(0, 10));
+    setEditCube1Weight(row.cube1_weight_kg != null ? String(row.cube1_weight_kg) : "");
+    setEditCube1Strength(row.cube1_strength_mpa != null ? String(row.cube1_strength_mpa) : "");
+    setEditCube2Weight(row.cube2_weight_kg != null ? String(row.cube2_weight_kg) : "");
+    setEditCube2Strength(row.cube2_strength_mpa != null ? String(row.cube2_strength_mpa) : "");
+    setEditCube3Weight(row.cube3_weight_kg != null ? String(row.cube3_weight_kg) : "");
+    setEditCube3Strength(row.cube3_strength_mpa != null ? String(row.cube3_strength_mpa) : "");
+    setEditNotes(row.notes ?? "");
+    setEditDialogOpen(true);
+  };
+
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingRow(null);
+    setEditCube1Weight("");
+    setEditCube1Strength("");
+    setEditCube2Weight("");
+    setEditCube2Strength("");
+    setEditCube3Weight("");
+    setEditCube3Strength("");
+    setEditNotes("");
+  };
+
+  const submitEdit = async () => {
+    if (!editingRow) return;
+    const w1 = editCube1Weight === "" ? null : Number(editCube1Weight);
+    const w2 = editCube2Weight === "" ? null : Number(editCube2Weight);
+    const w3 = editCube3Weight === "" ? null : Number(editCube3Weight);
+    const s1 = editCube1Strength === "" ? null : Number(editCube1Strength);
+    const s2 = editCube2Strength === "" ? null : Number(editCube2Strength);
+    const s3 = editCube3Strength === "" ? null : Number(editCube3Strength);
+    if ([w1, w2, w3, s1, s2, s3].some((v) => v == null || Number.isNaN(v as number))) {
+      notify.warning("Please enter all 3 cube weights and strengths.");
+      return;
+    }
+    try {
+      setEditSaving(true);
+      await api.patch(`/qc/tests/${editingRow.id}`, {
+        cube1_weight_kg: w1,
+        cube1_strength_mpa: s1,
+        cube2_weight_kg: w2,
+        cube2_strength_mpa: s2,
+        cube3_weight_kg: w3,
+        cube3_strength_mpa: s3,
+        test_date: editTestDate,
+        notes: editNotes.trim() ? editNotes : null,
+      });
+      await Promise.all([
+        resultsProjectId != null ? qc.invalidateQueries({ queryKey: qcProjectResultsKey(resultsProjectId) }) : Promise.resolve(),
+        editingRow.batch_id ? qc.invalidateQueries({ queryKey: qcTestsKey(editingRow.batch_id) }) : Promise.resolve(),
+      ]);
+      notify.success("QC result updated.");
+      closeEditDialog();
+    } catch (e) {
+      notify.error(
+        (e as any)?.response?.data?.detail ||
+          (e as any)?.response?.data?.message ||
+          (e as any)?.message ||
+          "Failed to update QC result."
+      );
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   return (
@@ -583,7 +678,7 @@ export default function QC() {
                 size="small"
                 fullWidth
                 sx={{ mt: 1 }}
-                value={avgPreview != null ? avgPreview.toFixed(2) : ""}
+                value={avgPreview != null ? avgPreview.toFixed(3) : ""}
                 disabled
               />
             </Grid>
@@ -639,18 +734,26 @@ export default function QC() {
                   <Typography variant="body2">
                     Avg:{" "}
                     {t.avg_strength_mpa != null
-                      ? `${t.avg_strength_mpa} MPa`
+                      ? `${format3Decimals(t.avg_strength_mpa)} MPa`
                       : t.measured_strength_mpa != null
-                      ? `${t.measured_strength_mpa} MPa`
+                      ? `${format3Decimals(t.measured_strength_mpa)} MPa`
                       : t.result}
-                    {t.required_strength_mpa != null ? ` (req ${t.required_strength_mpa} MPa)` : ""}
+                    {t.required_strength_mpa != null ? ` (req ${format3Decimals(t.required_strength_mpa)} MPa)` : ""}
                     {t.passed === true ? " • PASS" : t.passed === false ? " • FAIL" : ""}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Cubes:{" "}
-                    {(t.cube1_strength_mpa ?? "-") + " / " + (t.cube2_strength_mpa ?? "-") + " / " + (t.cube3_strength_mpa ?? "-")}
+                    {(t.cube1_strength_mpa != null ? format3Decimals(t.cube1_strength_mpa) : "-") +
+                      " / " +
+                      (t.cube2_strength_mpa != null ? format3Decimals(t.cube2_strength_mpa) : "-") +
+                      " / " +
+                      (t.cube3_strength_mpa != null ? format3Decimals(t.cube3_strength_mpa) : "-")}
                     {" • Weights (kg): "}
-                    {(t.cube1_weight_kg ?? "-") + " / " + (t.cube2_weight_kg ?? "-") + " / " + (t.cube3_weight_kg ?? "-")}
+                    {(t.cube1_weight_kg != null ? format3Decimals(t.cube1_weight_kg) : "-") +
+                      " / " +
+                      (t.cube2_weight_kg != null ? format3Decimals(t.cube2_weight_kg) : "-") +
+                      " / " +
+                      (t.cube3_weight_kg != null ? format3Decimals(t.cube3_weight_kg) : "-")}
                   </Typography>
                   {t.notes ? (
                     <Typography variant="caption" color="text.secondary">
@@ -727,6 +830,7 @@ export default function QC() {
                   <TableCell align="right">Measured (MPa)</TableCell>
                   <TableCell align="right">Required (MPa)</TableCell>
                   <TableCell>Result</TableCell>
+                  <TableCell align="right">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -738,10 +842,19 @@ export default function QC() {
                       {r.element_mark} ({r.element_type})
                     </TableCell>
                     <TableCell align="right">{r.age_days ?? ""}</TableCell>
-                    <TableCell align="right">{r.measured_strength_mpa ?? ""}</TableCell>
-                    <TableCell align="right">{r.required_strength_mpa ?? ""}</TableCell>
+                    <TableCell align="right">{format3Decimals(r.measured_strength_mpa)}</TableCell>
+                    <TableCell align="right">{format3Decimals(r.required_strength_mpa)}</TableCell>
                     <TableCell>
                       {r.passed === true ? "PASS" : r.passed === false ? "FAIL" : "PENDING"}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => loadTestForEdit(r)}
+                      >
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -749,6 +862,119 @@ export default function QC() {
             </Table>
           )}
         </Paper>
+
+        <Dialog open={editDialogOpen} onClose={editSaving ? undefined : closeEditDialog} fullWidth maxWidth="md">
+          <DialogTitle>Edit QC result</DialogTitle>
+          <DialogContent dividers>
+            {editingRow ? (
+              <Stack spacing={2} sx={{ mt: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {editingRow.test_date} • {editingRow.batch_id ?? ""} • {editingRow.element_mark} ({editingRow.element_type}) •{" "}
+                  {editingRow.age_days ?? "-"}d
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      label="Test date"
+                      type="date"
+                      size="small"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      value={editTestDate}
+                      onChange={(e) => setEditTestDate(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      label="Required (MPa)"
+                      size="small"
+                      fullWidth
+                      value={format3Decimals(editingRow.required_strength_mpa)}
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      label="Average (MPa)"
+                      size="small"
+                      fullWidth
+                      value={editAvgPreview != null ? editAvgPreview.toFixed(3) : ""}
+                      disabled
+                    />
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      label="Cube 1 weight (kg)"
+                      size="small"
+                      fullWidth
+                      value={editCube1Weight}
+                      onChange={(e) => setEditCube1Weight(e.target.value)}
+                    />
+                    <TextField
+                      label="Cube 1 strength (MPa)"
+                      size="small"
+                      fullWidth
+                      sx={{ mt: 1 }}
+                      value={editCube1Strength}
+                      onChange={(e) => setEditCube1Strength(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      label="Cube 2 weight (kg)"
+                      size="small"
+                      fullWidth
+                      value={editCube2Weight}
+                      onChange={(e) => setEditCube2Weight(e.target.value)}
+                    />
+                    <TextField
+                      label="Cube 2 strength (MPa)"
+                      size="small"
+                      fullWidth
+                      sx={{ mt: 1 }}
+                      value={editCube2Strength}
+                      onChange={(e) => setEditCube2Strength(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      label="Cube 3 weight (kg)"
+                      size="small"
+                      fullWidth
+                      value={editCube3Weight}
+                      onChange={(e) => setEditCube3Weight(e.target.value)}
+                    />
+                    <TextField
+                      label="Cube 3 strength (MPa)"
+                      size="small"
+                      fullWidth
+                      sx={{ mt: 1 }}
+                      value={editCube3Strength}
+                      onChange={(e) => setEditCube3Strength(e.target.value)}
+                    />
+                  </Grid>
+                </Grid>
+                <TextField
+                  label="Notes"
+                  size="small"
+                  fullWidth
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                />
+              </Stack>
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeEditDialog} color="inherit" disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={() => void submitEdit()} disabled={editSaving || !editingRow}>
+              {editSaving ? "Updating..." : "Update result"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Paper>
   );

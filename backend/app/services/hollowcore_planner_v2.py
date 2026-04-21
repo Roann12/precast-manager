@@ -121,36 +121,18 @@ def generate_plan_rows(
                 }
             )
 
+    # Only non-planned casts should reduce remaining demand.
+    # Planned rows are draft commitments that may need re-slotting.
     casted: dict[int, int] = dict(
         db.query(
             HollowcoreCast.element_id,
             func.coalesce(func.sum(HollowcoreCast.quantity), 0),
         )
         .filter(HollowcoreCast.factory_id == factory_id)
+        .filter(HollowcoreCast.status != "planned")
         .group_by(HollowcoreCast.element_id)
         .all()
     )
-    # Replanning replaces planned rows in the selected window on selected beds,
-    # so those quantities must not reduce remaining demand during simulation.
-    if bed_ids:
-        replanned_qty_rows = (
-            db.query(
-                HollowcoreCast.element_id,
-                func.coalesce(func.sum(HollowcoreCast.quantity), 0),
-            )
-            .filter(HollowcoreCast.factory_id == factory_id)
-            .filter(HollowcoreCast.status == "planned")
-            .filter(HollowcoreCast.cast_date >= start_date)
-            .filter(HollowcoreCast.cast_date <= end_date)
-            .filter((HollowcoreCast.bed_id.in_(bed_ids)) | (HollowcoreCast.bed_number.in_(bed_ids)))
-            .group_by(HollowcoreCast.element_id)
-            .all()
-        )
-        for eid, qty in replanned_qty_rows:
-            key = int(eid)
-            casted[key] = int(casted.get(key, 0) or 0) - int(qty or 0)
-            if casted[key] < 0:
-                casted[key] = 0
 
     elements = (
         db.query(Element)

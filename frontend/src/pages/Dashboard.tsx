@@ -194,7 +194,7 @@ export default function Dashboard() {
                       component={RouterLink}
                       to="/qc"
                       clickable
-                      label={`QC: ${overview.qc_manual_results_pending} results to enter`}
+                      label={`QC: ${overview.qc_manual_results_pending} pending recorded tests`}
                       color="warning"
                       variant="outlined"
                     />

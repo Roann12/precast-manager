@@ -1,5 +1,5 @@
 // File overview: Page component and UI logic for pages/QC.tsx.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -200,6 +200,8 @@ export default function QC() {
   const [editTestDate, setEditTestDate] = useState<string>(toLocalISODate());
   const [editNotes, setEditNotes] = useState<string>("");
   const [editSaving, setEditSaving] = useState(false);
+  const entryFormRef = useRef<HTMLDivElement | null>(null);
+  const testDateInputRef = useRef<HTMLInputElement | null>(null);
 
   const queueItemLabel = (i: QcDueItem, includeDueDate = false) => {
     const retestPrefix = i.is_retest ? "[Retest] " : "";
@@ -374,6 +376,14 @@ export default function QC() {
     setNotes("");
   };
 
+  useEffect(() => {
+    if (!selected) return;
+    entryFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      testDateInputRef.current?.focus();
+    }, 150);
+  }, [selected]);
+
   const loadTestForEdit = (test: QualityTestRow) => {
     const row = test as QcProjectResultRow;
     setEditingRow(row);
@@ -540,7 +550,7 @@ export default function QC() {
           </Grid>
         </Grid>
 
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper ref={entryFormRef} variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
             Pending outcomes (not failed at 7-day)
           </Typography>
@@ -661,6 +671,7 @@ export default function QC() {
                 InputLabelProps={{ shrink: true }}
                 value={testDate}
                 onChange={(e) => setTestDate(e.target.value)}
+                inputRef={testDateInputRef}
                 inputProps={selected ? { min: selected.due_date } : undefined}
                 helperText={selected ? (ageDays === 1 ? "Earliest: same cast day (hours-based)" : `Earliest: ${selected.due_date}`) : ""}
               />

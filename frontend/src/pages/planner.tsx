@@ -146,13 +146,11 @@ export default function Planner() {
     await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }, [queryClient]);
 
-  const loadDelays = async (fromDate?: string, toDate?: string) => {
+  const loadDelays = async () => {
     try {
       const res = await api.get<any[]>("/planner/delays", {
         params: {
           planner_type: "production",
-          from_date: fromDate,
-          to_date: toDate,
         },
       });
       setDelayEvents(
@@ -270,14 +268,19 @@ export default function Planner() {
     return byDate;
   }, [calendar]);
 
-  const dateKeys = Object.keys(grouped).sort();
+  const calendarDateKeys = Object.keys(grouped).sort();
 
   useEffect(() => {
-    const from = dateKeys.at(0);
-    const to = dateKeys.at(-1);
-    loadDelays(from, to).catch(console.error);
+    loadDelays().catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateKeys.join("|")]);
+  }, [calendarDateKeys.join("|")]);
+
+  const dateKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of calendarDateKeys) set.add(d);
+    for (const d of delayEvents) set.add(d.date);
+    return Array.from(set).sort();
+  }, [calendarDateKeys, delayEvents]);
 
   const mouldKeys = useMemo(() => {
     const set = new Set<string>();
@@ -327,7 +330,7 @@ export default function Planner() {
         lost_capacity: lost,
         reason: delayReason.trim() || null,
       })
-      .then(() => loadDelays(dateKeys.at(0), dateKeys.at(-1)))
+      .then(() => loadDelays())
       .then(() => loadCalendar())
       .then(() => refreshDashboardOverview())
       .then(() => setPendingDelayAutoShift(true))
@@ -343,7 +346,7 @@ export default function Planner() {
     setPlanning(true);
     api
       .delete(`/planner/delays/${id}`)
-      .then(() => loadDelays(dateKeys.at(0), dateKeys.at(-1)))
+      .then(() => loadDelays())
       .then(() => refreshDashboardOverview())
       .catch((e) => {
         console.error(e);

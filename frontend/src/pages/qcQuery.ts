@@ -37,8 +37,8 @@ export async function fetchQcMixStats(mixId: number) {
 export const qcProjectResultsKey = (projectId: number) => ["qc", "results", projectId] as const;
 
 // Fetches data for qc project results from the API.
-export async function fetchQcProjectResults(projectId: number) {
-  const { data } = await api.get("/qc/results", { params: { project_id: projectId } });
+export async function fetchQcProjectResults(projectId?: number) {
+  const { data } = await api.get("/qc/results", { params: projectId != null ? { project_id: projectId } : undefined });
   return data ?? [];
 }
 

@@ -167,6 +167,18 @@ export default function QC() {
   const projectResults = (projectResultsQuery.data ?? []) as QcProjectResultRow[];
   const projectResultsLoading = projectResultsQuery.isFetching;
 
+  const pendingResultsQuery = useQuery({
+    queryKey: ["qc", "results", "pending-outcomes"],
+    queryFn: () => fetchQcProjectResults(undefined),
+  });
+  const pendingResults = useMemo(() => {
+    const todayIso = toLocalISODate();
+    return ((pendingResultsQuery.data ?? []) as QcProjectResultRow[]).filter((r) => {
+      const rowDate = String(r.test_date ?? "").slice(0, 10);
+      return r.passed == null && rowDate !== "" && rowDate <= todayIso;
+    });
+  }, [pendingResultsQuery.data]);
+
   const [ageDays, setAgeDays] = useState<number>(7);
   const [cube1Weight, setCube1Weight] = useState<string>("");
   const [cube1Strength, setCube1Strength] = useState<string>("");
@@ -334,6 +346,7 @@ export default function QC() {
         qc.invalidateQueries({ queryKey: qcTestsKey(selected.batch_id) }),
         mid != null ? qc.invalidateQueries({ queryKey: qcMixStatsKey(mid) }) : Promise.resolve(),
         resultsProjectId != null ? qc.invalidateQueries({ queryKey: qcProjectResultsKey(resultsProjectId) }) : Promise.resolve(),
+        qc.invalidateQueries({ queryKey: ["qc", "results", "pending-outcomes"] }),
       ]);
       notify.success("QC result saved.");
     } catch (e) {
@@ -414,6 +427,7 @@ export default function QC() {
       await Promise.all([
         resultsProjectId != null ? qc.invalidateQueries({ queryKey: qcProjectResultsKey(resultsProjectId) }) : Promise.resolve(),
         editingRow.batch_id ? qc.invalidateQueries({ queryKey: qcTestsKey(editingRow.batch_id) }) : Promise.resolve(),
+        qc.invalidateQueries({ queryKey: ["qc", "results", "pending-outcomes"] }),
       ]);
       notify.success("QC result updated.");
       closeEditDialog();
@@ -525,6 +539,53 @@ export default function QC() {
             </Paper>
           </Grid>
         </Grid>
+
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+            Pending outcomes (not failed at 7-day)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            These are recorded tests with no final PASS/FAIL yet (for example, 7-day results below required strength).
+          </Typography>
+          {pendingResultsQuery.isFetching ? (
+            <Typography variant="body2" color="text.secondary">
+              Loading pending outcomes...
+            </Typography>
+          ) : pendingResults.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No pending outcomes.
+            </Typography>
+          ) : (
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Test date</TableCell>
+                  <TableCell>Batch</TableCell>
+                  <TableCell>Project</TableCell>
+                  <TableCell>Element</TableCell>
+                  <TableCell align="right">Age</TableCell>
+                  <TableCell align="right">Measured (MPa)</TableCell>
+                  <TableCell align="right">Required (MPa)</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pendingResults.map((r) => (
+                  <TableRow key={`pending-${r.id}`}>
+                    <TableCell>{String(r.test_date).slice(0, 10)}</TableCell>
+                    <TableCell>{r.batch_id ?? ""}</TableCell>
+                    <TableCell>{r.project_name}</TableCell>
+                    <TableCell>
+                      {r.element_mark} ({r.element_type})
+                    </TableCell>
+                    <TableCell align="right">{r.age_days ?? ""}</TableCell>
+                    <TableCell align="right">{format3Decimals(r.measured_strength_mpa)}</TableCell>
+                    <TableCell align="right">{format3Decimals(r.required_strength_mpa)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Paper>
 
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12}>

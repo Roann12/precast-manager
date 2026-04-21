@@ -121,6 +121,6 @@ test.describe("Dashboard overview (mocked API)", () => {
 
     await expect(page.getByRole("link", { name: /QC lab: 2 overdue/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /QC lab: 1 due today/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /QC: 3 results to enter/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /QC: 3 pending recorded tests/i })).toBeVisible();
   });
 });

@@ -46,8 +46,9 @@ const hollowcoreMenuItems: MenuItem[] = [
   { label: "Hollowcore Settings", path: "/hollowcore/settings", roles: ["planner", "admin"], requiresFactory: true },
 ];
 
+const qcMenuItems: MenuItem[] = [{ label: "QC", path: "/qc", roles: ["QC", "admin"], requiresFactory: true }];
+
 const logisticsMenuItems: MenuItem[] = [
-  { label: "QC", path: "/qc", roles: ["QC", "admin"], requiresFactory: true },
   { label: "Yard", path: "/yard", roles: ["yard", "admin"], requiresFactory: true },
   { label: "Yard Locations", path: "/yard-locations", roles: ["yard", "admin"], requiresFactory: true },
   { label: "Dispatch", path: "/dispatch", roles: ["dispatch", "admin"], requiresFactory: true },
@@ -92,6 +93,7 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
         base: [],
         wetCasting: [],
         hollowcore: [],
+        qc: [],
         logistics: [],
         adminSupport: [],
       };
@@ -102,6 +104,7 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
       base: baseMenuItems.filter((item) => canShowItem(item, role, factoryId)),
       wetCasting: wetCastingMenuItems.filter((item) => canShowItem(item, role, factoryId)),
       hollowcore: hollowcoreMenuItems.filter((item) => canShowItem(item, role, factoryId)),
+      qc: qcMenuItems.filter((item) => canShowItem(item, role, factoryId)),
       logistics: logisticsMenuItems.filter((item) => canShowItem(item, role, factoryId)),
       adminSupport: adminSupportMenuItems.filter((item) => canShowItem(item, role, factoryId)),
     };
@@ -184,6 +187,7 @@ export default function Sidebar({ collapsed }: { collapsed?: boolean }) {
         {visibleMenuItems.base.map((item) => renderNavItem(item))}
         {visibleMenuItems.base.length > 0 ? <Divider sx={{ my: 1 }} /> : null}
         {renderSection("wetCasting", "Wet Casting", visibleMenuItems.wetCasting)}
+        {visibleMenuItems.qc.map((item) => renderNavItem(item))}
         {renderSection("hollowcore", "Hollowcore", visibleMenuItems.hollowcore)}
         {renderSection("logistics", "Logistics", visibleMenuItems.logistics)}
         {renderSection("adminSupport", "Admin / Support", visibleMenuItems.adminSupport)}
